@@ -155,7 +155,7 @@ awp-wallet lock
 
 `--chain` accepts name or ID. Default: `ethereum`.
 
-Names: `ethereum`, `base`, `bsc`, `arbitrum`, `optimism`, `polygon`, `avalanche`, `fantom`, `sepolia`, `base-sepolia`
+Names: `ethereum`, `base`, `bsc`, `arbitrum`, `optimism`, `polygon`, `avalanche`, `fantom`, `zksync`, `linea`, `scroll`, `mantle`, `blast`, `celo`, `sepolia`, `base-sepolia`
 
 Custom chain: `--chain 99999 --rpc-url https://custom.rpc.com`
 

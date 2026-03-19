@@ -42,7 +42,7 @@ Each command is an independent process. The agent only sees JSON output and sess
 - **All EVM chains** — 400+ built-in via viem, plus custom chain support
 - **Dual-mode transactions** — Direct EOA (default, cheapest) or gasless ERC-4337 (auto when no gas)
 - **Self-custodial** — Private keys never leave the wallet process; agents only hold session tokens
-- **10 preconfigured chains** — Ethereum, Base, BSC, Arbitrum, Optimism, Polygon, Avalanche, Fantom, + testnets
+- **16 preconfigured chains** — Ethereum, Base, BSC, Arbitrum, Optimism, Polygon, Avalanche, Fantom, zkSync, Linea, Scroll, Mantle, Blast, Celo, + testnets
 - **26 CLI commands** — Send, balance, approve, revoke, sign, estimate, batch, and more
 - **144 tests** — Integration + E2E, 0 failures
 

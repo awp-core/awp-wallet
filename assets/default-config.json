@@ -221,6 +221,116 @@
         }
       }
     },
+    "zksync": {
+      "chainId": 324,
+      "gasStrategy": "erc20_paymaster",
+      "eip7702": false,
+      "tokens": {
+        "USDC": {
+          "address": "0x1d17CBcF0D6D143135aE902365D2E5e2A16538D4",
+          "decimals": 6
+        },
+        "USDT": {
+          "address": "0x493257fD37EDB34451f62EDf8D2a0C418852bA4C",
+          "decimals": 6
+        },
+        "WETH": {
+          "address": "0x5AEa5775959fBC2557Cc8789bC1bf90A239D9a91",
+          "decimals": 18
+        }
+      }
+    },
+    "linea": {
+      "chainId": 59144,
+      "gasStrategy": "erc20_paymaster",
+      "eip7702": false,
+      "tokens": {
+        "USDC": {
+          "address": "0x176211869cA2b568f2A7D4EE941E073a821EE1ff",
+          "decimals": 6
+        },
+        "USDT": {
+          "address": "0xA219439258ca9da29E9Cc4cE5596924745e12B93",
+          "decimals": 6
+        },
+        "WETH": {
+          "address": "0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f",
+          "decimals": 18
+        }
+      }
+    },
+    "scroll": {
+      "chainId": 534352,
+      "gasStrategy": "erc20_paymaster",
+      "eip7702": false,
+      "tokens": {
+        "USDC": {
+          "address": "0x06eFdBFf2a14a7c8E15944D1F4A48F9F95F663A4",
+          "decimals": 6
+        },
+        "USDT": {
+          "address": "0xf55BEC9cafDbE8a36eAe1AE435a5b15AB3FEC512",
+          "decimals": 6
+        },
+        "WETH": {
+          "address": "0x5300000000000000000000000000000000000004",
+          "decimals": 18
+        }
+      }
+    },
+    "mantle": {
+      "chainId": 5000,
+      "gasStrategy": "erc20_paymaster",
+      "eip7702": false,
+      "tokens": {
+        "USDC": {
+          "address": "0x09Bc4E0D864854c6aFB6eB9A9cdF58aC190D0dF9",
+          "decimals": 6
+        },
+        "USDT": {
+          "address": "0x201EBa5CC46D216Ce6DC03F6a759e8E766e956aE",
+          "decimals": 6
+        },
+        "WMNT": {
+          "address": "0x78c1b0C915c4FAA5FffA6CAbf0219DA63d7f4cb8",
+          "decimals": 18
+        }
+      }
+    },
+    "blast": {
+      "chainId": 81457,
+      "gasStrategy": "erc20_paymaster",
+      "eip7702": false,
+      "tokens": {
+        "USDB": {
+          "address": "0x4300000000000000000000000000000000000003",
+          "decimals": 18
+        },
+        "WETH": {
+          "address": "0x4300000000000000000000000000000000000004",
+          "decimals": 18
+        }
+      }
+    },
+    "celo": {
+      "chainId": 42220,
+      "gasStrategy": "erc20_paymaster",
+      "eip7702": false,
+      "tokens": {
+        "USDC": {
+          "address": "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
+          "decimals": 6
+        },
+        "USDT": {
+          "address": "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e",
+          "decimals": 6
+        },
+        "CELO": {
+          "address": "0x471EcE3750Da237f93B8E339c536989b8978a438",
+          "decimals": 18
+        }
+      }
+    },
     "base-sepolia": {
       "chainId": 84532,
       "gasStrategy": "verifying_paymaster",

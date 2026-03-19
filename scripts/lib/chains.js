@@ -18,6 +18,12 @@ for (const c of BUILTIN.values()) {
 NAME_TO_ID.set("bsc", 56)
 NAME_TO_ID.set("avax", 43114)
 NAME_TO_ID.set("ftm", 250)
+NAME_TO_ID.set("zksync", 324)
+NAME_TO_ID.set("linea", 59144)
+NAME_TO_ID.set("scroll", 534352)
+NAME_TO_ID.set("mantle", 5000)
+NAME_TO_ID.set("blast", 81457)
+NAME_TO_ID.set("celo", 42220)
 
 const CUSTOM = new Map()
 
