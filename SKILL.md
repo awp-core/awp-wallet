@@ -153,7 +153,7 @@ awp-wallet lock
 
 ## Chain & Token
 
-`--chain` accepts name or ID. Default: `bsc`.
+`--chain` accepts name or ID. Default: `ethereum`.
 
 Names: `ethereum`, `base`, `bsc`, `arbitrum`, `optimism`, `polygon`, `avalanche`, `fantom`, `sepolia`, `base-sepolia`
 
