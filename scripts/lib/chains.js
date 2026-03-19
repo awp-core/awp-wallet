@@ -58,16 +58,21 @@ export function resolveChainId(nameOrId) {
 
 export function viemChain(chainId, rpcUrl, nativeCurrency) {
   chainId = Number(chainId)
+  // If user provides a custom RPC URL, always override (even for known chains)
+  if (rpcUrl) {
+    const base = BUILTIN.get(chainId)
+    const c = defineChain({
+      id: chainId,
+      name: base?.name || `Chain ${chainId}`,
+      nativeCurrency: nativeCurrency || base?.nativeCurrency || { name: "ETH", symbol: "ETH", decimals: 18 },
+      rpcUrls: { default: { http: [rpcUrl] } },
+    })
+    CUSTOM.set(chainId, c)
+    return c
+  }
   if (CUSTOM.has(chainId)) return CUSTOM.get(chainId)
   if (BUILTIN.has(chainId)) return BUILTIN.get(chainId)
-  if (!rpcUrl) throw new Error(`Chain ${chainId} unknown. Provide --rpc-url or add to config.`)
-  const c = defineChain({
-    id: chainId, name: `Chain ${chainId}`,
-    nativeCurrency: nativeCurrency || { name: "ETH", symbol: "ETH", decimals: 18 },
-    rpcUrls: { default: { http: [rpcUrl] } },
-  })
-  CUSTOM.set(chainId, c)
-  return c
+  throw new Error(`Chain ${chainId} unknown. Provide --rpc-url or add to config.`)
 }
 
 // --- Load custom chains from config ---

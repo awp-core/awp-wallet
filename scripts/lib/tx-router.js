@@ -65,7 +65,7 @@ export async function batchTransaction({ sessionToken, operations, chain, mode }
   return { status: "batch_complete", results }
 }
 
-export async function approveToken({ sessionToken, asset, spender, amount, chain, mode }) {
+export async function approveToken({ sessionToken, asset, spender, amount, chain, mode, _logType = "approve", _logStatus = "approved" }) {
   requireScope(sessionToken, "transfer")
   // approve only needs address validation, not amount validation (amount=0 is valid for revoke)
   await validateTransaction({ to: spender, amount: "0", asset, chain, _skipAmountCheck: true })
@@ -93,7 +93,7 @@ export async function approveToken({ sessionToken, asset, spender, amount, chain
       hash, timeout: 120_000, confirmations: 1,
     })
     const result = {
-      type: "approve", status: "approved", mode: "direct", txHash: hash,
+      type: _logType, status: _logStatus, mode: "direct", txHash: hash,
       chain: chainObj.name, chainId, to: spender, asset, spender, amount,
       gasUsed: receipt.gasUsed.toString(),
       blockNumber: Number(receipt.blockNumber),
@@ -112,15 +112,14 @@ export async function approveToken({ sessionToken, asset, spender, amount, chain
         })
       }
     })
-    const approveResult = { ...result, type: "approve", status: "approved", to: spender, asset, spender, amount }
+    const approveResult = { ...result, type: _logType, status: _logStatus, to: spender, asset, spender, amount }
     await logTransaction(approveResult)
     return approveResult
   }
 }
 
 export async function revokeApproval({ sessionToken, asset, spender, chain, mode }) {
-  const result = await approveToken({ sessionToken, asset, spender, amount: "0", chain, mode })
-  return { ...result, type: "revoke", status: "revoked" }
+  return approveToken({ sessionToken, asset, spender, amount: "0", chain, mode, _logType: "revoke", _logStatus: "revoked" })
 }
 
 export async function estimateGas({ to, amount, asset, chain }) {

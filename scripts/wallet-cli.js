@@ -20,9 +20,6 @@ cli.option("--native-symbol <sym>", "Native currency symbol for custom chains")
 function json(obj) { console.log(JSON.stringify(obj, null, cli.opts().pretty ? 2 : undefined)) }
 function fail(msg) { console.error(JSON.stringify({ error: msg })); process.exit(1) }
 
-// --- Commands that don't require chain context ---
-const NO_CHAIN_COMMANDS = ["init", "import", "lock", "verify-log", "export", "change-password"]
-
 // --- Chain resolution (called within actions, chain module is preloaded) ---
 let _chains = null
 
@@ -289,11 +286,10 @@ cli.command("receive")
 cli.command("allowances")
   .description("Check token allowances")
   .requiredOption("--token <token>", "Session token")
-  .option("--asset <asset>", "Token symbol or contract address")
+  .requiredOption("--asset <asset>", "Token symbol or contract address")
   .requiredOption("--spender <address>", "Spender address")
   .action(async (opts) => {
     try {
-      if (!opts.asset) throw new Error("--asset is required for allowances")
       const chain = await resolveChain()
       const { getAllowances } = await import("./lib/balance.js")
       json(await getAllowances(opts.token, chain, opts.asset, opts.spender))

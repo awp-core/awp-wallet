@@ -162,6 +162,7 @@ fi
 if [[ "$AUTO_INIT" == true ]]; then
   if [[ -f "$WALLET_DIR/keystore.enc" ]]; then
     log "Wallet already exists, skipping init"
+    ADDRESS=$(node "$INSTALL_DIR/scripts/wallet-cli.js" receive 2>/dev/null | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).eoaAddress || '')" 2>/dev/null || echo "")
   else
     log "Initializing wallet..."
     INIT_RESULT=$(WALLET_PASSWORD="$WALLET_PASSWORD" node "$INSTALL_DIR/scripts/wallet-cli.js" init 2>&1)
