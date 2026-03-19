@@ -6,9 +6,9 @@ Self-custodial, chain-agnostic EVM blockchain wallet for AI agents. Direct EOA t
 
 Works with OpenClaw · Claude Code · Cursor · Codex · Gemini CLI · Windsurf — and any agent that can invoke CLI commands.
 
-## Install as Agent Skill
+## Install
 
-Paste the repo URL in your OpenClaw conversation, or install manually:
+Paste the repo URL in your agent conversation, or install manually:
 
 ```bash
 git clone https://github.com/awp-core/awp-wallet.git
@@ -16,8 +16,6 @@ cd awp-wallet && bash install.sh
 ```
 
 ### How Agents Use the Wallet
-
-Once installed, agents invoke wallet commands as subprocess calls. All output is JSON:
 
 ```
 Agent
@@ -35,15 +33,15 @@ Agent
         → { "status": "locked" }
 ```
 
-Each command is an independent process. The agent only sees JSON output and session tokens — **never** private keys. Password is auto-generated on first use.
+Each command is an independent process. The agent only sees JSON and session tokens — **never** private keys. Password is auto-generated on first use.
 
 ## Features
 
-- **All EVM chains** — 400+ built-in via viem, plus custom chain support
-- **Dual-mode transactions** — Direct EOA (default, cheapest) or gasless ERC-4337 (auto when no gas)
-- **Self-custodial** — Private keys never leave the wallet process; agents only hold session tokens
-- **16 preconfigured chains** — Ethereum, Base, BSC, Arbitrum, Optimism, Polygon, Avalanche, Fantom, zkSync, Linea, Scroll, Mantle, Blast, Celo, + testnets
-- **26 CLI commands** — Send, balance, approve, revoke, sign, estimate, batch, and more
+- **400+ EVM chains** — 16 preconfigured + any custom chain via `--chain <id> --rpc-url`
+- **Dual-mode** — Direct EOA (default) or gasless ERC-4337 (auto when no gas)
+- **Self-custodial** — Private keys never leave the wallet process
+- **16 preconfigured chains** — Ethereum, Base, BSC, Arbitrum, Optimism, Polygon, Avalanche, Fantom, zkSync, Linea, Scroll, Mantle, Blast, Celo + testnets
+- **26 commands** — Send, balance, approve, revoke, sign, estimate, batch, and more
 - **144 tests** — Integration + E2E, 0 failures
 
 ## Commands
@@ -66,92 +64,73 @@ Each command is an independent process. The agent only sees JSON output and sess
 | `change-password / export` | Account management |
 | `upgrade-7702 / deploy-4337` | Smart account ops |
 
-See [SKILL.md](SKILL.md) for full command reference with all options.
+See [SKILL.md](SKILL.md) for full command reference.
 
 ## Architecture
 
 ```
 Agent
   │
-  ├── awp-wallet balance --token T --chain bsc     → JSON stdout
-  ├── awp-wallet send --token T --to 0x... ...     → JSON stdout
-  └── awp-wallet lock                              → JSON stdout
+  ├── awp-wallet balance --token T --chain ethereum  → JSON stdout
+  ├── awp-wallet send --token T --to 0x... ...       → JSON stdout
+  └── awp-wallet lock                                → JSON stdout
 
 Each command = independent Node.js process
   ├── Reads encrypted keystore (scrypt N=262144)
-  ├── Decrypts signer from AES-GCM cache (scrypt N=16384, ~50ms)
+  ├── Decrypts signer from AES-GCM cache (scrypt N=16384)
   ├── Executes on-chain operation via viem
   ├── Returns JSON result
   └── Process exits — all secrets destroyed
 ```
 
-### Transaction Routing
-
-```
-User intent
-     │
-     ▼
- tx-router: select path
-     │
-     ├── Has native gas OR --mode direct ──→ direct-tx.js
-     │     viem walletClient.sendTransaction()
-     │     21k gas (ETH) / ~65k gas (ERC-20)
-     │
-     └── No gas OR --mode gasless ──→ gasless-tx.js
-           Smart Account → Bundler → Paymaster → EntryPoint
-           ERC-4337, gas paid by paymaster
-```
-
-## Security Model
+## Security
 
 | Layer | Protection |
 |-------|-----------|
-| Keystore | scrypt (N=262144) — ~1 attempt/sec brute-force |
-| Signer cache | scrypt (N=16384) — ~2000 attempts/sec |
+| Keystore | scrypt (N=262144) + AES-128-CTR |
+| Signer cache | scrypt (N=16384) + AES-256-GCM |
 | Session tokens | HMAC-SHA256, time-limited, tamper-proof |
-| Path traversal | Regex validation on all token IDs |
+| Path traversal | Regex validation on token IDs |
 | File permissions | 0o600/0o700 (owner-only) |
-| Process isolation | Keys destroyed on process exit |
+| Process isolation | Keys destroyed on exit |
 | Transaction limits | Per-tx and 24h rolling caps |
-| Audit log | SHA-256 hash-chain for tamper detection |
+| Audit log | SHA-256 hash-chain |
 
-**Private keys never enter the agent's context.** The agent only receives time-limited session tokens.
+**Private keys never enter the agent's context.**
 
 ## Environment Variables
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `WALLET_PASSWORD` | For write ops | Keystore encryption password (auto-generated if not set) |
-| `NEW_WALLET_PASSWORD` | change-password only | New password for `change-password` command |
+| `WALLET_PASSWORD` | For write ops | Keystore password (auto-generated if not set) |
+| `NEW_WALLET_PASSWORD` | change-password | New password |
 | `PIMLICO_API_KEY` | For gasless | ERC-4337 bundler/paymaster |
 | `ALCHEMY_API_KEY` | Optional | RPC + bundler fallback |
-| `BSC_RPC_URL` | Optional | Custom BSC RPC endpoint |
 
 ## Platform Integration
 
 ### Claude Code
 
-Add the wallet guide to your web3 project's CLAUDE.md:
+Add the wallet guide to your project:
 
 ```bash
-cp awp-wallet/docs/CLAUDE-WEB3-GUIDE.md your-project/
 cat awp-wallet/docs/CLAUDE-WEB3-GUIDE.md >> your-project/CLAUDE.md
 ```
 
-See [docs/CLAUDE-WEB3-GUIDE.md](docs/CLAUDE-WEB3-GUIDE.md) for the full guide.
+See [docs/CLAUDE-WEB3-GUIDE.md](docs/CLAUDE-WEB3-GUIDE.md).
 
 ### Other Agents
 
-AWP Wallet works with any agent that can run CLI commands and parse JSON output. Copy `SKILL.md` to your agent's skills directory, or point your agent platform to this repo.
+Works with any agent that can run CLI commands and parse JSON. Point your agent to this repo's `SKILL.md`.
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
 | CLI | commander |
-| Keystore | ethers v6 (scrypt + AES-128-CTR) + AES-256-GCM signer cache |
+| Keystore | ethers v6 + AES-256-GCM cache |
 | Transactions | viem (direct EOA) |
-| Smart Accounts | permissionless 0.3 (Kernel v3, ERC-4337) |
+| Smart Accounts | permissionless 0.3 (Kernel v3) |
 | Bundler | viem/account-abstraction (fallback transport) |
 | Chain Registry | viem/chains (400+ built-in) |
 
@@ -165,88 +144,49 @@ AWP Wallet works with any agent that can run CLI commands and parse JSON output.
 
 ```bash
 git clone https://github.com/awp-core/awp-wallet.git
-cd awp-wallet
-bash scripts/setup.sh
+cd awp-wallet && bash scripts/setup.sh
 ```
-
-This will install dependencies, register the `awp-wallet` command, create runtime directory (`~/.openclaw-wallet/`), and generate the HMAC session secret.
 
 ### One-Click Deploy
 
 ```bash
 git clone https://github.com/awp-core/awp-wallet.git
-cd awp-wallet
-bash install.sh
+cd awp-wallet && bash install.sh
 ```
 
-Or with options:
-
-```bash
-bash install.sh \
-  --dir ~/awp-wallet \
-  --bsc-rpc "https://your-bsc-rpc.com" \
-  --pimlico "pm_your_api_key"
-```
+Options:
 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--dir <path>` | `~/awp-wallet` | Installation directory |
-| `--password <pwd>` | Auto-generated | Wallet password (48-char random if omitted) |
-| `--pimlico <key>` | None | Enable gasless transactions |
-| `--bsc-rpc <url>` | Config template | Custom BSC RPC endpoint |
-| `--no-init` | Init enabled | Skip wallet creation (setup only) |
+| `--password <pwd>` | Auto-generated | Wallet password |
+| `--pimlico <key>` | None | Gasless transactions |
+| `--no-init` | Init enabled | Setup only |
 
-### Quick Start (Standalone)
+### Quick Start
 
 ```bash
-# Create wallet
 WALLET_PASSWORD="your-password" awp-wallet init
-
-# Unlock (get session token)
 WALLET_PASSWORD="your-password" awp-wallet unlock --duration 3600
-# => { "sessionToken": "wlt_abc123...", "expires": "..." }
-
-# Check balance
-awp-wallet balance --token wlt_abc123 --chain bsc
-
-# Send tokens
+awp-wallet balance --token wlt_abc123 --chain ethereum
 WALLET_PASSWORD="your-password" awp-wallet send \
   --token wlt_abc123 --to 0xRecipient --amount 50 --asset usdc --chain base
-
-# Lock
 awp-wallet lock
 ```
 
 ### Testing
 
 ```bash
-# All tests
 node --test tests/integration/*.test.js tests/e2e/*.test.js
-
-# With network access (enables balance/estimate tests)
-BSC_RPC_URL="https://..." node --test tests/integration/*.test.js tests/e2e/*.test.js
 ```
 
-144 tests across 11 files: 8 integration suites + 3 E2E suites.
-
-### Publish to ClawHub
-
-```bash
-clawhub login
-bash publish.sh          # patch bump
-bash publish.sh minor    # minor bump
-bash publish.sh 2.0.0    # explicit version
-```
+144 tests, 11 files.
 
 ### Updating
 
 ```bash
-cd awp-wallet
-git pull
-npm install
+cd awp-wallet && git pull && npm install
 ```
-
-No migration needed — the runtime directory (`~/.openclaw-wallet/`) and keystore are preserved across updates.
 
 ## License
 
