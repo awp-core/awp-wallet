@@ -149,7 +149,7 @@ AWP Wallet works with any agent that can run CLI commands and parse JSON output.
 | Layer | Technology |
 |-------|-----------|
 | CLI | commander |
-| Keystore | ethers v6 (scrypt + AES-128-CTR) |
+| Keystore | ethers v6 (scrypt + AES-128-CTR) + AES-256-GCM signer cache |
 | Transactions | viem (direct EOA) |
 | Smart Accounts | permissionless 0.3 (Kernel v3, ERC-4337) |
 | Bundler | viem/account-abstraction (fallback transport) |

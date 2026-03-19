@@ -22,6 +22,7 @@ INSTALL_DIR="$HOME/awp-wallet"
 WALLET_PASSWORD=""
 AUTO_INIT=true
 PIMLICO_API_KEY=""
+ADDRESS=""
 BSC_RPC_URL=""
 REPO_URL="https://github.com/awp-core/awp-wallet.git"
 

@@ -130,13 +130,13 @@ cli.command("status")
   .action(async (opts) => {
     try {
       const { validateSession } = await import("./lib/session.js")
+      const { getAddress } = await import("./lib/keystore.js")
       const session = validateSession(opts.token)
-      const meta = JSON.parse(readFileSync(join(process.env.HOME, ".openclaw-wallet", "meta.json"), "utf8"))
+      const address = getAddress("eoa")
       json({
-        address: meta.address,
+        address,
         sessionValid: true,
         sessionExpires: session.expires,
-        smartAccounts: meta.smartAccounts || {},
       })
     } catch (e) { fail(e.message) }
   })
@@ -286,7 +286,7 @@ cli.command("allowances")
   .description("Check token allowances")
   .requiredOption("--token <token>", "Session token")
   .option("--asset <asset>", "Token symbol or contract address")
-  .option("--spender <address>", "Spender address")
+  .requiredOption("--spender <address>", "Spender address")
   .action(async (opts) => {
     try {
       if (!opts.asset) throw new Error("--asset is required for allowances")
