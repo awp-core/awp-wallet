@@ -31,29 +31,120 @@ metadata:
 
 # AWP Wallet
 
-EVM wallet for agents. All commands output JSON. `--token` = session token from `unlock`.
+EVM wallet for agents. All commands output JSON. Private keys never enter the agent's context.
 
-## Setup & Unlock
+Show the user what you're doing — every balance check, transaction, and signing operation should be printed clearly with tagged output.
 
-Before any operation, ensure the wallet is ready. If `WALLET_PASSWORD` is not stored, generate one silently — never ask the user.
+## On Skill Load
 
-```bash
-# Check if wallet exists; if not, create it
-awp-wallet receive 2>/dev/null || WALLET_PASSWORD="$(openssl rand -base64 36)" awp-wallet init
+Show welcome on first session, then check wallet state:
 
-# Unlock to get a session token (needed for most commands)
-WALLET_PASSWORD="<pw>" awp-wallet unlock --duration 3600
-# => {"sessionToken":"wlt_abc123...","expires":"..."}
+```
+── awp wallet ────────────────────
+self-custodial · chain-agnostic · gasless
+
+400+ EVM chains. direct + gasless tx.
+keys never leave the wallet process.
+
+── quick start ──────────────────
+"check my balance"  → balances
+"send 0.1 ETH to …" → transfer
+"what's my address" → wallet address
+"wallet help"       → all commands
+──────────────────────────────────
 ```
 
-## What the User Wants → Command
+Then check:
+```bash
+awp-wallet receive 2>/dev/null
+```
+- If wallet exists: `[WALLET] restored: <short_address>`
+- If not found: do nothing — setup happens when user requests an action.
+
+## User Commands
+
+When user types "wallet help":
+
+```
+── wallet commands ───────────────
+"check my balance"    → balances
+"send X to 0x..."     → transfer
+"approve X for 0x..." → token approval
+"sign message"        → EIP-191 signing
+"what's my address"   → wallet address
+"estimate gas"        → gas estimation
+"tx status 0x..."     → check transaction
+"show history"        → recent transactions
+──────────────────────────────────
+```
+
+## Output Tags
+
+Use these prefixes for all operations:
+
+| Tag | When |
+|-----|------|
+| `[WALLET]` | Wallet setup, status, address |
+| `[QUERY]` | Balance checks, allowances, gas estimates |
+| `[TX]` | Transactions — always show explorer link |
+| `[SIGN]` | Message/data signing |
+| `[!]` | Warnings, errors |
+
+## Setup (automatic, no user input)
+
+Run once when any wallet action is first requested. If `WALLET_PASSWORD` is not stored, generate one silently — never ask the user.
+
+```bash
+WALLET_PASSWORD=$(openssl rand -base64 36)
+WALLET_PASSWORD="<pw>" awp-wallet init
+TOKEN=$(WALLET_PASSWORD="<pw>" awp-wallet unlock --duration 3600 | jq -r '.sessionToken')
+```
+
+Print setup progress:
+```
+[1/3] wallet       initializing...
+[1/3] wallet       <short_address> ✓
+[2/3] tools        node, openssl ✓
+[3/3] unlocked     session active ✓
+
+ready.
+```
+
+`--token` in commands below = session token from unlock.
+
+## Write Safety — Confirm Before Execute
+
+Every transaction (send, approve, revoke) must show a preview before executing:
+
+```
+[TX] about to send:
+     to:        <address>
+     amount:    <amount> <asset>
+     chain:     <chain_name>
+     mode:      <direct / gasless>
+     gas est:   ~<amount>
+     proceed? (y/n)
+```
+
+On "y": execute. On "n": `[TX] cancelled.`
+
+## Actions
 
 ### Check balance
 
 ```bash
-awp-wallet balance --token $T --chain ethereum             # all balances on chain
-awp-wallet balance --token $T --chain bsc --asset usdc     # specific token
-awp-wallet portfolio --token $T                             # all 16 chains at once
+awp-wallet balance --token $T --chain ethereum
+awp-wallet balance --token $T --chain bsc --asset usdc
+awp-wallet portfolio --token $T   # all 16 chains
+```
+
+Print:
+```
+[QUERY] balance on <chain_name>
+── balances ──────────────────────
+ETH:        <amount>
+USDC:       <amount>
+──────────────────────────────────
 ```
 
 ### Send tokens
@@ -65,11 +156,19 @@ WALLET_PASSWORD="<pw>" awp-wallet send --token $T --to 0xAddr --amount 0.1 --cha
 # ERC-20
 WALLET_PASSWORD="<pw>" awp-wallet send --token $T --to 0xAddr --amount 100 --asset usdc --chain base
 
-# Gasless (no native gas needed)
+# Gasless (no native gas)
 WALLET_PASSWORD="<pw>" awp-wallet send --token $T --to 0xAddr --amount 50 --asset usdc --chain base --mode gasless
 ```
 
-### Approve / Revoke token spending
+Print after send:
+```
+[TX] sent <amount> <asset> → <short_address>
+[TX] hash: <txHash>
+[TX] view: https://<explorer>/tx/<txHash>
+[TX] confirmed ✓
+```
+
+### Approve / Revoke
 
 ```bash
 WALLET_PASSWORD="<pw>" awp-wallet approve --token $T --asset usdc --spender 0xRouter --amount 1000 --chain base
@@ -82,9 +181,11 @@ WALLET_PASSWORD="<pw>" awp-wallet revoke --token $T --asset usdc --spender 0xRou
 # EIP-191
 WALLET_PASSWORD="<pw>" awp-wallet sign-message --token $T --message "Hello World"
 
-# EIP-712 typed data (Permit2, DeFi protocols)
+# EIP-712 typed data
 WALLET_PASSWORD="<pw>" awp-wallet sign-typed-data --token $T --data '{"types":{...},"primaryType":"...","domain":{...},"message":{...}}'
 ```
+
+Print: `[SIGN] signed ✓ signature: <sig>`
 
 ### Batch operations
 
@@ -96,15 +197,22 @@ WALLET_PASSWORD="<pw>" awp-wallet batch --token $T --chain base \
 ### Get wallet address
 
 ```bash
-awp-wallet receive                    # no token needed
-awp-wallet receive --chain base       # includes smart account address
+awp-wallet receive
+```
+
+Print:
+```
+[WALLET] address
+── wallet ────────────────────────
+EOA:            <address>
+smart account:  <address or "not deployed">
+──────────────────────────────────
 ```
 
 ### Estimate gas
 
 ```bash
 awp-wallet estimate --to 0xAddr --amount 0.1 --chain ethereum
-awp-wallet estimate --to 0xAddr --amount 100 --asset usdc --chain base
 ```
 
 ### Check transaction
@@ -128,18 +236,18 @@ awp-wallet allowances --token $T --asset usdc --spender 0xRouter --chain base
 ### Chain info
 
 ```bash
-awp-wallet chains                     # list all 16 configured chains
-awp-wallet chain-info --chain zksync  # capabilities + gasless availability
+awp-wallet chains                     # list all 16 chains
+awp-wallet chain-info --chain zksync  # capabilities
 ```
 
 ### Account management
 
 ```bash
-WALLET_PASSWORD="<pw>" awp-wallet init                                        # create wallet
-WALLET_PASSWORD="<pw>" awp-wallet import --mnemonic "word1 word2 ... word12"  # import existing
-WALLET_PASSWORD="<pw>" awp-wallet export                                      # show seed phrase
+WALLET_PASSWORD="<pw>" awp-wallet init
+WALLET_PASSWORD="<pw>" awp-wallet import --mnemonic "word1 word2 ... word12"
+WALLET_PASSWORD="<pw>" awp-wallet export
 WALLET_PASSWORD="<old>" NEW_WALLET_PASSWORD="<new>" awp-wallet change-password
-awp-wallet verify-log                                                          # audit log integrity
+awp-wallet verify-log
 ```
 
 ## Lock
@@ -150,6 +258,8 @@ Always lock when done:
 awp-wallet lock
 ```
 
+Print: `[WALLET] locked ✓`
+
 ## Chains & Tokens
 
 `--chain` — name or numeric ID. Default: `ethereum`.
@@ -158,20 +268,27 @@ awp-wallet lock
 
 Custom: `--chain 99999 --rpc-url https://custom.rpc.com`
 
-`--asset` — symbol or contract address: `usdc` `usdt` `awp` `weth` `wbnb` `dai` or `0x...`
+`--asset` — symbol or address: `usdc` `usdt` `awp` `weth` `wbnb` `dai` or `0x...`
 
 ## Gasless Mode
 
 Auto-activates when wallet has no native gas. Requires `PIMLICO_API_KEY`. Force with `--mode gasless`.
 
-## Errors
+Print when auto-switching:
+```
+[GAS] native balance: 0
+[GAS] switching to gasless mode (ERC-4337)
+```
 
-| Error | Fix |
-|-------|-----|
-| `WALLET_PASSWORD environment variable required` | Generate password, store, inject |
-| `No wallet found` | `awp-wallet init` |
-| `Config not found` | `bash scripts/setup.sh` |
-| `Invalid or expired session token` | `awp-wallet unlock` |
-| `Insufficient balance for transfer + gas` | Fund wallet or `--mode gasless` |
-| `Daily limit exceeded` | Edit `~/.openclaw-wallet/config.json` |
-| `Amount must be a positive number` | Amount must be > 0 |
+## Error Recovery
+
+Recover automatically — don't show raw errors to users:
+
+| Error | Print | Recovery |
+|-------|-------|----------|
+| `WALLET_PASSWORD required` | `[!] wallet password missing.` | Generate one automatically |
+| `No wallet found` | `[!] no wallet. creating...` | Auto run `awp-wallet init` |
+| `Config not found` | `[!] not configured.` | Auto run `setup.sh` |
+| `Invalid or expired session` | `[!] session expired.` | Auto re-unlock |
+| `Insufficient balance` | `[!] insufficient: <current>. need <required>.` | Suggest funding or gasless |
+| `Daily limit exceeded` | `[!] daily limit reached.` | Inform user |
