@@ -1,12 +1,14 @@
 import { Wallet, encryptKeystoreJson } from "ethers"
 import { privateKeyToAccount } from "viem/accounts"
-import { createHash, createCipheriv, createDecipheriv, randomBytes } from "node:crypto"
+import { createHash, createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto"
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from "node:fs"
 import { join } from "node:path"
 
 const WALLET_DIR = join(process.env.HOME, ".openclaw-wallet")
 const KS_PATH = join(WALLET_DIR, "keystore.enc")
 const META_PATH = join(WALLET_DIR, "meta.json")
+const CACHE_DIR = join(WALLET_DIR, ".signer-cache")
+const CACHE_SALT_PATH = join(CACHE_DIR, ".salt")
 
 function getPassword() {
   const pw = process.env.WALLET_PASSWORD
@@ -14,41 +16,62 @@ function getPassword() {
   return pw
 }
 
-// --- AES-256-GCM encrypted signer cache ---
-const CACHE_DIR = join(WALLET_DIR, ".signer-cache")
+// --- Shared helpers ---
 
-// Derive AES key from password via scrypt (N=16384, ~50ms — strong KDF but much faster than keystore's N=262144)
-// This is NOT SHA-256 — an attacker with the cache file still faces scrypt brute-force cost
-import { scryptSync } from "node:crypto"
+// Decrypt keystore with error wrapping (used by loadSigner, unlockAndCache, changePassword, exportMnemonic)
+function decryptKeystore(password) {
+  const json = readFileSync(KS_PATH, "utf8")
+  try { return Wallet.fromEncryptedJsonSync(json, password || getPassword()) }
+  catch (e) {
+    if ((e.message || "").toLowerCase().match(/password|decrypt|incorrect/))
+      throw new Error("Wrong password — decryption failed.")
+    throw e
+  }
+}
 
-const CACHE_SALT_PATH = join(WALLET_DIR, ".signer-cache", ".salt")
+// Persist new wallet to disk (used by initWallet, importWallet)
+async function persistNewWallet(wallet, status) {
+  const json = await encryptKeystoreJson(wallet, getPassword(), { scrypt: { N: 262144 } })
+  if (!existsSync(WALLET_DIR)) mkdirSync(WALLET_DIR, { mode: 0o700 })
+  writeFileSync(KS_PATH, json, { mode: 0o600 })
+  writeFileSync(META_PATH, JSON.stringify({ address: wallet.address, smartAccounts: {} }), { mode: 0o600 })
+  return { status, address: wallet.address }
+}
+
+// --- AES-256-GCM signer cache with scrypt KDF ---
+
+// Cache the derived AES key per-process (password doesn't change mid-process)
+let _aesKeyCache = null
+let _aesKeyCachePassword = null
 
 function deriveAesKey(password) {
+  if (_aesKeyCache && _aesKeyCachePassword === password) return _aesKeyCache
+
   let salt
   if (existsSync(CACHE_SALT_PATH)) {
     salt = readFileSync(CACHE_SALT_PATH)
   } else {
     salt = randomBytes(32)
-    if (!existsSync(join(WALLET_DIR, ".signer-cache"))) mkdirSync(join(WALLET_DIR, ".signer-cache"), { mode: 0o700 })
+    if (!existsSync(CACHE_DIR)) mkdirSync(CACHE_DIR, { mode: 0o700 })
     writeFileSync(CACHE_SALT_PATH, salt, { mode: 0o600 })
   }
-  return scryptSync(password, salt, 32, { N: 16384, r: 8, p: 1 })  // ~50ms, 32 bytes = AES-256
+  _aesKeyCache = scryptSync(password, salt, 32, { N: 16384, r: 8, p: 1 })
+  _aesKeyCachePassword = password
+  return _aesKeyCache
 }
 
-// Write encrypted cache (called by unlockAndCache)
 function writeSignerCache(sessionId, privateKey, expiresISO) {
   const key = deriveAesKey(getPassword())
-  const iv = randomBytes(12)  // GCM standard 96-bit IV
+  const iv = randomBytes(12)
   const cipher = createCipheriv("aes-256-gcm", key, iv)
   const plaintext = JSON.stringify({ privateKey, expires: expiresISO })
   const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()])
   const tag = cipher.getAuthTag()
-  const blob = Buffer.concat([iv, tag, encrypted])  // File format: iv(12) + tag(16) + ciphertext
+  const blob = Buffer.concat([iv, tag, encrypted])
   if (!existsSync(CACHE_DIR)) mkdirSync(CACHE_DIR, { mode: 0o700 })
   writeFileSync(join(CACHE_DIR, sessionId + ".key"), blob, { mode: 0o600 })
 }
 
-// Read encrypted cache. Returns a viem LocalAccount or null.
 function readSignerCache() {
   if (!existsSync(CACHE_DIR)) return null
   const password = process.env.WALLET_PASSWORD
@@ -69,80 +92,53 @@ function readSignerCache() {
       if (new Date(data.expires) > new Date()) {
         return privateKeyToAccount(data.privateKey)
       }
-      try { unlinkSync(join(CACHE_DIR, f)) } catch { /* already deleted by concurrent process */ }  // expired
+      try { unlinkSync(join(CACHE_DIR, f)) } catch {}
     } catch {
-      try { unlinkSync(join(CACHE_DIR, f)) } catch { /* already deleted by concurrent process */ }  // decryption failed
+      try { unlinkSync(join(CACHE_DIR, f)) } catch {}
     }
   }
   return null
 }
 
-export function loadSigner() {
-  // 1. Try encrypted file cache (~50ms scrypt KDF, still much faster than keystore's ~1.5s)
-  const cached = readSignerCache()
-  if (cached) return { account: cached, cleanup: () => {} }
+// --- Exports ---
 
-  // 2. Cache miss -> scrypt decryption (~1.5s)
-  const json = readFileSync(KS_PATH, "utf8")
-  let w
-  try { w = Wallet.fromEncryptedJsonSync(json, getPassword()) }
-  catch (e) {
-    if ((e.message || "").toLowerCase().match(/password|decrypt|incorrect/))
-      throw new Error("Wrong password — decryption failed.")
-    throw e
-  }
-  const account = privateKeyToAccount(w.privateKey)
-  // Don't write cache here — cache is written by unlockAndCache (bound to session TTL)
-  return { account, cleanup: () => {} }
+export function loadSigner() {
+  const cached = readSignerCache()
+  if (cached) return { account: cached }
+
+  const w = decryptKeystore()
+  return { account: privateKeyToAccount(w.privateKey) }
 }
 
-// Decrypt + write encrypted cache. Only called by session.js unlockWallet.
 export function unlockAndCache(sessionId, expiresISO) {
-  const json = readFileSync(KS_PATH, "utf8")
-  let w
-  try { w = Wallet.fromEncryptedJsonSync(json, getPassword()) }
-  catch (e) {
-    if ((e.message || "").toLowerCase().match(/password|decrypt|incorrect/))
-      throw new Error("Wrong password — decryption failed.")
-    throw e
-  }
+  const w = decryptKeystore()
   writeSignerCache(sessionId, w.privateKey, expiresISO)
   return { account: privateKeyToAccount(w.privateKey) }
 }
 
 export function clearSignerCache() {
   if (!existsSync(CACHE_DIR)) return
-  // Remove all .key cache files and the salt (force re-derive on next unlock)
   for (const f of readdirSync(CACHE_DIR)) {
-    try { unlinkSync(join(CACHE_DIR, f)) } catch { /* concurrent deletion is harmless */ }
+    try { unlinkSync(join(CACHE_DIR, f)) } catch {}
   }
+  _aesKeyCache = null
+  _aesKeyCachePassword = null
 }
 
 export async function initWallet() {
   if (existsSync(KS_PATH)) throw new Error("Wallet already exists.")
-  const w = Wallet.createRandom()
-  const json = await encryptKeystoreJson(w, getPassword(), { scrypt: { N: 262144 } })
-  if (!existsSync(WALLET_DIR)) mkdirSync(WALLET_DIR, { mode: 0o700 })
-  writeFileSync(KS_PATH, json, { mode: 0o600 })
-  writeFileSync(META_PATH, JSON.stringify({ address: w.address, smartAccounts: {} }), { mode: 0o600 })
-  return { status: "created", address: w.address }
+  return persistNewWallet(Wallet.createRandom(), "created")
 }
 
 export async function importWallet(mnemonic) {
   if (existsSync(KS_PATH)) throw new Error("Wallet already exists.")
-  const w = Wallet.fromPhrase(mnemonic.trim())
-  const json = await encryptKeystoreJson(w, getPassword(), { scrypt: { N: 262144 } })
-  if (!existsSync(WALLET_DIR)) mkdirSync(WALLET_DIR, { mode: 0o700 })
-  writeFileSync(KS_PATH, json, { mode: 0o600 })
-  writeFileSync(META_PATH, JSON.stringify({ address: w.address, smartAccounts: {} }), { mode: 0o600 })
-  return { status: "imported", address: w.address }
+  return persistNewWallet(Wallet.fromPhrase(mnemonic.trim()), "imported")
 }
 
 export async function changePassword() {
   const newPw = process.env.NEW_WALLET_PASSWORD
   if (!newPw) throw new Error("NEW_WALLET_PASSWORD environment variable required.")
-  const json = readFileSync(KS_PATH, "utf8")
-  const w = Wallet.fromEncryptedJsonSync(json, getPassword())
+  const w = decryptKeystore()
   const newJson = await encryptKeystoreJson(w, newPw, { scrypt: { N: 262144 } })
   writeFileSync(KS_PATH, newJson, { mode: 0o600 })
   clearSignerCache()
@@ -150,8 +146,7 @@ export async function changePassword() {
 }
 
 export function exportMnemonic() {
-  const json = readFileSync(KS_PATH, "utf8")
-  const w = Wallet.fromEncryptedJsonSync(json, getPassword())
+  const w = decryptKeystore()
   if (!w.mnemonic) throw new Error("Wallet has no mnemonic (imported from private key).")
   return {
     mnemonic: w.mnemonic.phrase,
@@ -159,11 +154,14 @@ export function exportMnemonic() {
   }
 }
 
-export function getAddress(type = "eoa", chainId) {
+// --- Meta.json with in-process cache ---
+let _metaCache = null
+
+function loadMeta() {
+  if (_metaCache) return _metaCache
   try {
-    const meta = JSON.parse(readFileSync(META_PATH, "utf8"))
-    if (type === "smart") return meta.smartAccounts?.[String(chainId)] || null
-    return meta.address
+    _metaCache = JSON.parse(readFileSync(META_PATH, "utf8"))
+    return _metaCache
   } catch (err) {
     if (err.code === "ENOENT") throw new Error("No wallet found. Run 'init' first.")
     if (err instanceof SyntaxError) throw new Error("Wallet metadata corrupted. Re-import with 'import --mnemonic'.")
@@ -171,12 +169,19 @@ export function getAddress(type = "eoa", chainId) {
   }
 }
 
+export function getAddress(type = "eoa", chainId) {
+  const meta = loadMeta()
+  if (type === "smart") return meta.smartAccounts?.[String(chainId)] || null
+  return meta.address
+}
+
 export function saveSmartAccountAddress(chainId, addr) {
-  const meta = JSON.parse(readFileSync(META_PATH, "utf8"))
-  if (meta.smartAccounts?.[String(chainId)] === addr) return  // deduplicate
+  const meta = loadMeta()
+  if (meta.smartAccounts?.[String(chainId)] === addr) return
   if (!meta.smartAccounts) meta.smartAccounts = {}
   meta.smartAccounts[String(chainId)] = addr
   writeFileSync(META_PATH, JSON.stringify(meta), { mode: 0o600 })
+  _metaCache = meta // update cache
 }
 
 export function getReceiveInfo(chainId) {

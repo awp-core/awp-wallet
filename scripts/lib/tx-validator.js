@@ -1,7 +1,7 @@
 import { isAddress, getAddress as checksumAddr } from "viem"
 import { getAddress as walletGetAddress } from "./keystore.js"
 import { getHistory } from "./tx-logger.js"
-import { loadConfig, resolveChainId, viemChain } from "./chains.js"
+import { loadConfig, resolveChainId, viemChain, nativeSymbol } from "./chains.js"
 
 function checkLimit(amount, limitStr, label) {
   if (!limitStr) return  // No limit configured
@@ -13,10 +13,7 @@ function checkLimit(amount, limitStr, label) {
 function checkDailyLimit(amount, asset, chain, batchSpent = {}) {
   const cfg = loadConfig()
   // Resolve null asset (native transfer) to the chain's native currency symbol
-  const resolvedAsset = asset || (() => {
-    try { return viemChain(resolveChainId(chain)).nativeCurrency.symbol }
-    catch { return "native" }
-  })()
+  const resolvedAsset = asset || nativeSymbol(chain)
   const normalizedAsset = resolvedAsset.toUpperCase()
   const limitStr = cfg.dailyLimits?.[normalizedAsset] || cfg.dailyLimits?.default
   if (!limitStr) return
@@ -77,10 +74,7 @@ export async function validateTransaction({ to, amount, asset, chain, _batchSpen
   }
 
   // 3. Per-transaction limit
-  const resolvedAsset = asset || (() => {
-    try { return viemChain(resolveChainId(chain)).nativeCurrency.symbol }
-    catch { return "native" }
-  })()
+  const resolvedAsset = asset || nativeSymbol(chain)
   const perTxLimit = cfg.perTransactionMax?.[resolvedAsset.toUpperCase()] || cfg.perTransactionMax?.default
   checkLimit(amount, perTxLimit, "Per-transaction limit")
 
@@ -95,10 +89,7 @@ export async function validateBatchOps(operations, chain) {
     if (op.type === "raw") throw new Error("Raw call type not allowed in batch.")
     await validateTransaction({ to: op.to, amount: op.amount, asset: op.asset, chain, _batchSpent: batchSpent })
     // Accumulate the amount for this batch
-    const asset = (op.asset || (() => {
-      try { return viemChain(resolveChainId(chain)).nativeCurrency.symbol }
-      catch { return "native" }
-    })()).toUpperCase()
+    const asset = (op.asset || nativeSymbol(chain)).toUpperCase()
     batchSpent[asset] = (batchSpent[asset] || 0) + parseFloat(op.amount)
   }
 }

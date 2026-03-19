@@ -163,6 +163,12 @@ export function publicClient(chainNameOrId) {
   return _clientCache.get(chainId)
 }
 
+// --- Native currency symbol resolution ---
+export function nativeSymbol(chain) {
+  try { return viemChain(resolveChainId(chain)).nativeCurrency.symbol }
+  catch { return "native" }
+}
+
 // --- Dual-mode token resolution ---
 export async function tokenInfo(chain, symbolOrAddress) {
   const chainId = resolveChainId(chain)
@@ -173,13 +179,11 @@ export async function tokenInfo(chain, symbolOrAddress) {
     if (entry) return { symbol: symbolOrAddress.toUpperCase(), ...entry }
     throw new Error(`Token "${symbolOrAddress}" not configured for chain "${chain}". Use contract address: --asset 0x...`)
   }
-  // Contract address -> on-chain query (supports any token on any chain)
+  // Contract address -> on-chain query (parallel decimals + symbol)
   const client = publicClient(chainId)
-  const decimals = Number(await client.readContract({
-    address: symbolOrAddress, abi: erc20Abi, functionName: "decimals"
-  }))
-  const symbol = await client.readContract({
-    address: symbolOrAddress, abi: erc20Abi, functionName: "symbol"
-  }).catch(() => "UNKNOWN")
+  const [decimals, symbol] = await Promise.all([
+    client.readContract({ address: symbolOrAddress, abi: erc20Abi, functionName: "decimals" }).then(Number),
+    client.readContract({ address: symbolOrAddress, abi: erc20Abi, functionName: "symbol" }).catch(() => "UNKNOWN"),
+  ])
   return { symbol, address: symbolOrAddress, decimals }
 }

@@ -1,4 +1,4 @@
-import { createWalletClient, http } from "viem"
+import { createWalletClient, http, zeroAddress } from "viem"
 import { eip7702Actions } from "viem/experimental"
 import { requireScope } from "./session.js"
 import { loadSigner, getAddress } from "./keystore.js"
@@ -62,7 +62,7 @@ export async function revokeVia7702(sessionToken, chain) {
 
   // Revoke EIP-7702 delegation — set to zero address
   const authorization = await walletClient.signAuthorization({
-    contractAddress: "0x0000000000000000000000000000000000000000",
+    contractAddress: zeroAddress,
   })
 
   const hash = await walletClient.sendTransaction({

@@ -20,19 +20,19 @@ import {
 const HAS_RPC = !!process.env.BSC_RPC_URL
 
 // ----------------------------------------------------------------
-// 1. chains command — lists all 10 configured chains
+// 1. chains command — lists all 16 configured chains
 // ----------------------------------------------------------------
 describe("chains command", () => {
   let ctx
 
   afterEach(() => ctx?.cleanup())
 
-  it("lists all 10 configured chains", () => {
+  it("lists all 16 configured chains", () => {
     ctx = createTestEnv()
     const res = runCli("chains", ctx.env)
     assert.equal(res.exitCode, 0, `chains should succeed: ${res.stderr}`)
     assert.ok(Array.isArray(res.json.chains), "should return chains array")
-    assert.equal(res.json.chains.length, 10, `should have 10 chains, actual: ${res.json.chains.length}`)
+    assert.equal(res.json.chains.length, 16, `should have 16 chains, actual: ${res.json.chains.length}`)
   })
 })
 
@@ -258,19 +258,19 @@ describe("BSC token decimals", () => {
 })
 
 // ----------------------------------------------------------------
-// 13. Default chain — omitting --chain uses config.defaultChain ("bsc")
+// 13. Default chain — omitting --chain uses config.defaultChain ("ethereum")
 // ----------------------------------------------------------------
 describe("default chain", () => {
   let ctx
 
   afterEach(() => ctx?.cleanup())
 
-  it("omitting --chain in chain-info uses defaultChain (bsc)", () => {
+  it("omitting --chain in chain-info uses defaultChain (ethereum)", () => {
     ctx = createTestEnv()
-    // chain-info without --chain should use defaultChain = "bsc"
+    // chain-info without --chain should use defaultChain = "ethereum"
     const res = runCli("chain-info", ctx.env)
     assert.equal(res.exitCode, 0, `chain-info should succeed: ${res.stderr}`)
-    assert.equal(res.json.chainId, 56, "default chain should be BSC (chainId: 56)")
+    assert.equal(res.json.chainId, 1, "default chain should be Ethereum (chainId: 1)")
   })
 })
 
