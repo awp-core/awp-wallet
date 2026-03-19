@@ -19,10 +19,6 @@
     "ETH": "0.25",
     "default": "250"
   },
-  "confirmationThreshold": {
-    "USDC": "200",
-    "default": "100"
-  },
   "allowlistMode": false,
   "allowlistedRecipients": [],
   "bundlerProviders": [

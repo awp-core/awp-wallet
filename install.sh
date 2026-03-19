@@ -225,6 +225,7 @@ cat <<ENDJSON
   "walletPassword": "$WALLET_PASSWORD",
   "address": "${ADDRESS:-null}",
   "command": "awp-wallet",
+  "pimlicoApiKey": "${PIMLICO_API_KEY:-null}",
   "pimlicoEnabled": $([ -n "$PIMLICO_API_KEY" ] && echo true || echo false),
   "bscRpcConfigured": $([ -n "$BSC_RPC_URL" ] && echo true || echo false),
   "_warning": "Store walletPassword in your secret manager immediately. Do NOT log this output."

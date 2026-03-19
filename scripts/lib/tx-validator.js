@@ -28,7 +28,7 @@ function checkDailyLimit(amount, asset, chain, batchSpent = {}) {
     .filter(e => new Date(e.timestamp).getTime() > since
       && e.chainId === chainId
       && (e.asset || "").toUpperCase() === normalizedAsset
-      && e.type !== "approve")  // Only accumulate transfers, not approve/revoke operations
+      && e.type !== "approve" && e.type !== "revoke")  // Only accumulate transfers
     .reduce((sum, e) => sum + parseFloat(e.amount), 0)
   // Add the accumulated amount already validated in this batch but not yet written to the log
   const batchPending = batchSpent[normalizedAsset] || 0

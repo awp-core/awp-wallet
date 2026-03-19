@@ -119,7 +119,8 @@ export async function approveToken({ sessionToken, asset, spender, amount, chain
 }
 
 export async function revokeApproval({ sessionToken, asset, spender, chain, mode }) {
-  return approveToken({ sessionToken, asset, spender, amount: "0", chain, mode })
+  const result = await approveToken({ sessionToken, asset, spender, amount: "0", chain, mode })
+  return { ...result, type: "revoke", status: "revoked" }
 }
 
 export async function estimateGas({ to, amount, asset, chain }) {

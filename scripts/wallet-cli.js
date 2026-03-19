@@ -83,8 +83,10 @@ cli.command("unlock")
   .option("--scope <scope>", "Session scope (read|transfer|full)", "full")
   .action(async (opts) => {
     try {
+      const duration = parseInt(opts.duration)
+      if (isNaN(duration) || duration < 1) throw new Error("--duration must be a positive integer (seconds).")
       const { unlockWallet } = await import("./lib/session.js")
-      json(unlockWallet(parseInt(opts.duration), opts.scope))
+      json(unlockWallet(duration, opts.scope))
     } catch (e) { fail(e.message) }
   })
 
@@ -190,6 +192,8 @@ cli.command("batch")
     try {
       const chain = await resolveChain()
       const operations = JSON.parse(opts.ops)
+      if (!Array.isArray(operations) || operations.length === 0)
+        throw new Error("--ops must be a non-empty JSON array of operations.")
       const { batchTransaction } = await import("./lib/tx-router.js")
       json(await batchTransaction({ sessionToken: opts.token, operations, chain, mode: opts.mode }))
     } catch (e) { fail(e.message) }
