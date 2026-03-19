@@ -13,7 +13,7 @@ async function userHasStablecoin(chainId) {
       functionName: "balanceOf", args: [addr]
     })
     // >= 0.01 USDC, calculate threshold based on actual decimals (BSC uses 18 decimals, not 6)
-    const threshold = BigInt(10 ** decimals) / 100n
+    const threshold = (10n ** BigInt(decimals)) / 100n
     return BigInt(bal) >= threshold
   } catch { return false }
 }

@@ -203,7 +203,9 @@ echo -e "  unlock, send, approve, sign-message, change-password, export" >&2
 echo "" >&2
 
 if [[ -n "$PIMLICO_API_KEY" ]]; then
-  echo -e "  ${GREEN}Gasless TX:${NC}  Enabled (PIMLICO_API_KEY set)" >&2
+  echo -e "  ${GREEN}Gasless TX:${NC}  Enabled (PIMLICO_API_KEY provided)" >&2
+  echo -e "  ${YELLOW}NOTE:${NC} Store PIMLICO_API_KEY in your secret manager." >&2
+  echo -e "  ${YELLOW}      ${NC} Export it before running awp-wallet send --mode gasless." >&2
 else
   echo -e "  ${YELLOW}Gasless TX:${NC}  Disabled (set PIMLICO_API_KEY to enable)" >&2
 fi

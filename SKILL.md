@@ -7,7 +7,7 @@ description: >
   contract, sign a message or EIP-712 typed data, estimate gas, check a
   transaction, or create/manage a wallet. Supports 16 preconfigured chains
   (Ethereum, Base, BSC, Arbitrum, Optimism, Polygon, Avalanche, Fantom,
-  zkSync, Linea, Scroll, Mantle, Blast, Celo) plus any custom EVM chain.
+  zkSync, Linea, Scroll, Mantle, Blast, Celo + testnets) plus any custom EVM chain.
   Handles gasless transactions automatically when no native gas is available.
   Do NOT use for writing Solidity, deploying contracts, or blockchain analytics.
 metadata:
