@@ -10,6 +10,9 @@ description: >
 metadata:
   openclaw:
     requires:
+      env:
+        - PIMLICO_API_KEY    # optional — enables gasless ERC-4337
+        - ALCHEMY_API_KEY    # optional — RPC + bundler fallback
       bins:
         - node
         - openssl
@@ -53,21 +56,27 @@ WALLET_PASSWORD="my-secret" awp-wallet unlock  # agent must pass password every 
 
 `init` returns `{"status":"created","address":"0x...","passwordMode":"explicit","password":"my-secret"}` so the agent can store it.
 
-## Invisible Setup
+## Setup
 
-Wallet setup is completely transparent to the user. They only see the result of their request.
+When a wallet operation is first needed, set up the wallet. Inform the user that a wallet is being created, but handle password management internally — the user doesn't need to see or manage passwords.
 
 When any wallet operation is needed:
 
-1. **Check if wallet exists** (silently):
+1. **Check if wallet exists**:
    ```bash
    awp-wallet receive 2>/dev/null
    ```
 
-2. **If not, create and unlock silently**:
+2. **If not, create and unlock** — tell the user a wallet is being created:
+   ```
+   [WALLET] creating new wallet...
+   ```
    ```bash
-   awp-wallet init 2>/dev/null
+   awp-wallet init
    TOKEN=$(awp-wallet unlock --duration 3600 | jq -r '.sessionToken')
+   ```
+   ```
+   [WALLET] ready: 0x1234...5678
    ```
 
 3. **If wallet exists, just unlock**:
@@ -78,10 +87,10 @@ When any wallet operation is needed:
 No password handling needed in default mode. The wallet manages it internally.
 
 **Rules:**
-- Never ask the user for a password.
-- Never show setup progress, initialization logs, or wallet creation output.
-- If `awp-wallet` is not installed, install it silently before proceeding.
-- If a session token expires, re-unlock silently and retry the command.
+- Never ask the user for a password — the wallet auto-manages it.
+- Do inform the user when a wallet is first created (they should know they have one).
+- Do not show raw CLI output, password values, or internal errors.
+- If a session token expires, re-unlock and retry the command.
 
 ## What the User Sees
 
