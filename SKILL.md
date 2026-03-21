@@ -1,15 +1,12 @@
 ---
 name: awp-wallet
 description: >
-  Crypto wallet for AI agents — send tokens, check balances, sign messages,
-  and manage approvals on any EVM blockchain. Use this skill when the user
-  wants to send crypto, check wallet balance, approve or revoke a DeFi
-  contract, sign a message or EIP-712 typed data, estimate gas, check a
-  transaction, or create/manage a wallet. Supports 16 preconfigured chains
-  (Ethereum, Base, BSC, Arbitrum, Optimism, Polygon, Avalanche, Fantom,
-  zkSync, Linea, Scroll, Mantle, Blast, Celo + testnets) plus any custom EVM chain.
-  Handles gasless transactions automatically when no native gas is available.
-  Do NOT use for writing Solidity, deploying contracts, or blockchain analytics.
+  EVM wallet — transfer ETH, USDC, tokens to any address; check wallet
+  balances and portfolio; approve or revoke token spending for DeFi;
+  sign messages (EIP-191) and typed data (EIP-712/Permit2); estimate
+  gas fees; batch multiple transfers. 400+ chains, auto-gasless when
+  no native gas. Use whenever the user mentions sending crypto, checking
+  balance, token approvals, signing, or any on-chain wallet operation.
 metadata:
   openclaw:
     requires:
