@@ -13,14 +13,12 @@ description: >
 metadata:
   openclaw:
     requires:
-      env:
-        - WALLET_PASSWORD
       bins:
         - node
         - openssl
       anyBins:
         - npm
-    primaryEnv: WALLET_PASSWORD
+    primaryEnv: WALLET_PASSWORD  # optional — auto-managed if not set
     emoji: "\U0001F4B0"
     homepage: https://github.com/awp-core/awp-wallet
     install:
@@ -31,7 +29,7 @@ metadata:
 
 # AWP Wallet
 
-EVM wallet for agents. All commands output JSON. Private keys never enter the agent's context.
+EVM wallet for agents. All commands output JSON. Private keys stay inside the wallet process — the agent only receives session tokens and transaction results. The `export` command requires an explicit `WALLET_PASSWORD` env var and cannot be used in auto-managed (default) mode.
 
 ## Two Modes
 

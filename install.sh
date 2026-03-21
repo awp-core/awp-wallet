@@ -41,7 +41,7 @@ err()  { echo -e "${RED}[awp-wallet]${NC} $*" >&2; exit 1; }
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dir)        INSTALL_DIR="$2"; shift 2 ;;
-    --password)   WALLET_PASSWORD="$2"; shift 2 ;;
+    --password)   WALLET_PASSWORD="$2"; USER_PROVIDED_PASSWORD=true; shift 2 ;;
     --no-init)    AUTO_INIT=false; shift ;;
     --pimlico)    PIMLICO_API_KEY="$2"; shift 2 ;;
     --bsc-rpc)    BSC_RPC_URL="$2"; shift 2 ;;
@@ -193,14 +193,18 @@ if [[ "$AUTO_INIT" == true ]]; then
   echo -e "  ${GREEN}Wallet address:${NC}  $ADDRESS" >&2
 fi
 
-echo "" >&2
-echo -e "  ${YELLOW}IMPORTANT — Save this password securely:${NC}" >&2
-echo "" >&2
-echo -e "  ${RED}WALLET_PASSWORD=${NC}${WALLET_PASSWORD}" >&2
-echo "" >&2
-echo -e "  Store it in your secret manager. You need it for:" >&2
-echo -e "  unlock, send, approve, sign-message, change-password, export" >&2
-echo "" >&2
+# Only show password if user explicitly provided one (password mode)
+if [[ -n "${USER_PROVIDED_PASSWORD:-}" ]]; then
+  echo "" >&2
+  echo -e "  ${YELLOW}IMPORTANT — Save this password securely:${NC}" >&2
+  echo -e "  ${RED}WALLET_PASSWORD=${NC}${WALLET_PASSWORD}" >&2
+  echo -e "  Store it in your secret manager." >&2
+  echo "" >&2
+else
+  echo "" >&2
+  echo -e "  ${GREEN}Password:${NC} auto-managed (no action needed)" >&2
+  echo "" >&2
+fi
 
 if [[ -n "$PIMLICO_API_KEY" ]]; then
   echo -e "  ${GREEN}Gasless TX:${NC}  Enabled (PIMLICO_API_KEY provided)" >&2
@@ -217,20 +221,14 @@ echo -e "  ${CYAN}awp-wallet balance --token wlt_... --chain bsc${NC}" >&2
 echo -e "  ${CYAN}awp-wallet lock${NC}" >&2
 echo "" >&2
 
-# Output machine-readable JSON to stdout (for OpenClaw to parse)
-# NOTE: walletPassword is included for initial setup only — OpenClaw must store it
-# in its encrypted secret store immediately and never log this output.
+# Output machine-readable JSON to stdout
+if [[ -n "${USER_PROVIDED_PASSWORD:-}" ]]; then
 cat <<ENDJSON
-{
-  "status": "installed",
-  "installDir": "$INSTALL_DIR",
-  "walletDir": "$WALLET_DIR",
-  "walletPassword": "$WALLET_PASSWORD",
-  "address": "${ADDRESS:-null}",
-  "command": "awp-wallet",
-  "pimlicoApiKey": "${PIMLICO_API_KEY:-null}",
-  "pimlicoEnabled": $([ -n "$PIMLICO_API_KEY" ] && echo true || echo false),
-  "bscRpcConfigured": $([ -n "$BSC_RPC_URL" ] && echo true || echo false),
-  "_warning": "Store walletPassword in your secret manager immediately. Do NOT log this output."
-}
+{"status":"installed","installDir":"$INSTALL_DIR","walletDir":"$WALLET_DIR","passwordMode":"explicit","walletPassword":"$WALLET_PASSWORD","address":"${ADDRESS:-null}","command":"awp-wallet","pimlicoApiKey":"${PIMLICO_API_KEY:-null}","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
+ENDJSON
+else
+cat <<ENDJSON
+{"status":"installed","installDir":"$INSTALL_DIR","walletDir":"$WALLET_DIR","passwordMode":"auto","address":"${ADDRESS:-null}","command":"awp-wallet","pimlicoApiKey":"${PIMLICO_API_KEY:-null}","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
+ENDJSON
+fi
 ENDJSON

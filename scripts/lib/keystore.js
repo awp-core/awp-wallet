@@ -167,6 +167,8 @@ export async function changePassword() {
 }
 
 export function exportMnemonic() {
+  // Security: export requires explicit WALLET_PASSWORD — auto-managed password cannot export seed
+  if (!process.env.WALLET_PASSWORD) throw new Error("WALLET_PASSWORD required for export. Auto-managed wallets cannot export seed phrases for security.")
   const w = decryptKeystore()
   if (!w.mnemonic) throw new Error("Wallet has no mnemonic (imported from private key).")
   return {
