@@ -1,12 +1,11 @@
 ---
 name: awp-wallet
 description: >
-  EVM wallet — transfer ETH, USDC, tokens to any address; check wallet
-  balances and portfolio; approve or revoke token spending for DeFi;
-  sign messages (EIP-191) and typed data (EIP-712/Permit2); estimate
-  gas fees; batch multiple transfers. 400+ chains, auto-gasless when
-  no native gas. Use whenever the user mentions sending crypto, checking
-  balance, token approvals, signing, or any on-chain wallet operation.
+  Use when the user says "send ETH/USDC/tokens to 0x...", "check my
+  balance", "approve USDC for a contract", "sign this message", "how
+  much gas", or anything involving crypto transfers, wallet balances,
+  token approvals, EIP-712 signing, or on-chain operations. Supports
+  400+ EVM chains with auto-gasless when no native gas is available.
 metadata:
   openclaw:
     requires:
