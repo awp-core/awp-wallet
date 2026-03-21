@@ -49,7 +49,7 @@
   The installer will:
   1. Install npm dependencies
   2. Register `awp-wallet` as a global command
-  3. Create runtime directory (`~/.awp-wallet/`) with strict permissions
+  3. Create runtime directory (`~/.openclaw-wallet/`) with strict permissions
   4. Generate a 48-char random wallet password
   5. Initialize the wallet and verify the full lifecycle
 
@@ -95,7 +95,7 @@
   This will:
   - Install 4 npm dependencies (viem, permissionless, ethers, commander)
   - Register the `awp-wallet` command globally via `npm link`
-  - Create the runtime directory `~/.awp-wallet/` with strict permissions (0o700)
+  - Create the runtime directory `~/.openclaw-wallet/` with strict permissions (0o700)
   - Copy the default chain config (16 chains, 3 bundler providers)
   - Generate a 32-byte HMAC session secret
 

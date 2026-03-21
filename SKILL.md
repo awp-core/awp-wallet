@@ -119,6 +119,8 @@ On "y": execute. On "n": `[TX] cancelled.`
 
 ## Actions
 
+All examples below work in Default Mode (no password needed). In Password Mode, prefix write commands with `WALLET_PASSWORD="<pw>"`.
+
 `--token $T` below = session token from unlock. Always have a valid token before running commands.
 
 ### "Check my balance" / "How much do I have"
@@ -142,13 +144,13 @@ USDC:   1,250.00
 
 ```bash
 # Native (ETH/BNB)
-WALLET_PASSWORD="<pw>" awp-wallet send --token $T --to 0xAddr --amount 0.1 --chain ethereum
+awp-wallet send --token $T --to 0xAddr --amount 0.1 --chain ethereum
 
 # ERC-20
-WALLET_PASSWORD="<pw>" awp-wallet send --token $T --to 0xAddr --amount 100 --asset usdc --chain base
+awp-wallet send --token $T --to 0xAddr --amount 100 --asset usdc --chain base
 
 # Gasless (no native gas)
-WALLET_PASSWORD="<pw>" awp-wallet send --token $T --to 0xAddr --amount 50 --asset usdc --chain base --mode gasless
+awp-wallet send --token $T --to 0xAddr --amount 50 --asset usdc --chain base --mode gasless
 ```
 
 Show to user:
@@ -162,24 +164,24 @@ Show to user:
 ### "Approve token" / "Revoke approval"
 
 ```bash
-WALLET_PASSWORD="<pw>" awp-wallet approve --token $T --asset usdc --spender 0xRouter --amount 1000 --chain base
-WALLET_PASSWORD="<pw>" awp-wallet revoke --token $T --asset usdc --spender 0xRouter --chain base
+awp-wallet approve --token $T --asset usdc --spender 0xRouter --amount 1000 --chain base
+awp-wallet revoke --token $T --asset usdc --spender 0xRouter --chain base
 ```
 
 ### "Sign this message"
 
 ```bash
 # EIP-191
-WALLET_PASSWORD="<pw>" awp-wallet sign-message --token $T --message "Hello World"
+awp-wallet sign-message --token $T --message "Hello World"
 
 # EIP-712 typed data
-WALLET_PASSWORD="<pw>" awp-wallet sign-typed-data --token $T --data '{"types":{...},"primaryType":"...","domain":{...},"message":{...}}'
+awp-wallet sign-typed-data --token $T --data '{"types":{...},"primaryType":"...","domain":{...},"message":{...}}'
 ```
 
 ### "Send to multiple addresses"
 
 ```bash
-WALLET_PASSWORD="<pw>" awp-wallet batch --token $T --chain base \
+awp-wallet batch --token $T --chain base \
   --ops '[{"to":"0xA","amount":"10","asset":"usdc"},{"to":"0xB","amount":"20","asset":"usdc"}]'
 ```
 
@@ -225,9 +227,9 @@ awp-wallet chain-info --chain zksync
 ### Account management (only when user explicitly asks)
 
 ```bash
-WALLET_PASSWORD="<pw>" awp-wallet init
-WALLET_PASSWORD="<pw>" awp-wallet import --mnemonic "word1 word2 ... word12"
-WALLET_PASSWORD="<pw>" awp-wallet export
+awp-wallet init
+awp-wallet import --mnemonic "word1 word2 ... word12"
+awp-wallet export
 WALLET_PASSWORD="<old>" NEW_WALLET_PASSWORD="<new>" awp-wallet change-password
 awp-wallet verify-log
 ```

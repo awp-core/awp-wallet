@@ -224,11 +224,10 @@ echo "" >&2
 # Output machine-readable JSON to stdout
 if [[ -n "${USER_PROVIDED_PASSWORD:-}" ]]; then
 cat <<ENDJSON
-{"status":"installed","installDir":"$INSTALL_DIR","walletDir":"$WALLET_DIR","passwordMode":"explicit","walletPassword":"$WALLET_PASSWORD","address":"${ADDRESS:-null}","command":"awp-wallet","pimlicoApiKey":"${PIMLICO_API_KEY:-null}","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
+{"status":"installed","installDir":"$INSTALL_DIR","walletDir":"$WALLET_DIR","passwordMode":"explicit","walletPassword":"$WALLET_PASSWORD","address":"${ADDRESS:-null}","command":"awp-wallet","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
 ENDJSON
 else
 cat <<ENDJSON
-{"status":"installed","installDir":"$INSTALL_DIR","walletDir":"$WALLET_DIR","passwordMode":"auto","address":"${ADDRESS:-null}","command":"awp-wallet","pimlicoApiKey":"${PIMLICO_API_KEY:-null}","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
+{"status":"installed","installDir":"$INSTALL_DIR","walletDir":"$WALLET_DIR","passwordMode":"auto","address":"${ADDRESS:-null}","command":"awp-wallet","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
 ENDJSON
 fi
-ENDJSON

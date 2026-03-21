@@ -93,8 +93,8 @@ function writeSignerCache(sessionId, privateKey, expiresISO) {
 
 function readSignerCache() {
   if (!existsSync(CACHE_DIR)) return null
-  const password = process.env.WALLET_PASSWORD
-  if (!password) return null
+  let password
+  try { password = getPassword() } catch { return null }
 
   const key = deriveAesKey(password)
   const files = readdirSync(CACHE_DIR).filter(f => f.endsWith(".key"))
