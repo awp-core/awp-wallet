@@ -33,9 +33,34 @@ metadata:
 
 EVM wallet for agents. All commands output JSON. Private keys never enter the agent's context.
 
+## Two Modes
+
+### Default Mode (no password needed)
+
+The wallet auto-generates and stores a password internally. No `WALLET_PASSWORD` needed. Just run commands:
+
+```bash
+awp-wallet init                          # auto-generates password, stores in ~/.openclaw-wallet/.wallet-password
+awp-wallet unlock --duration 3600        # reads password from file automatically
+awp-wallet send --token $T --to 0x...    # works without WALLET_PASSWORD env var
+```
+
+This is the recommended mode for agents. The user never sees or manages a password.
+
+### Password Mode (explicit password)
+
+Set `WALLET_PASSWORD` environment variable to take full control. The auto-managed password file is not used:
+
+```bash
+WALLET_PASSWORD="my-secret" awp-wallet init    # uses provided password, returns it in JSON output
+WALLET_PASSWORD="my-secret" awp-wallet unlock  # agent must pass password every time
+```
+
+`init` returns `{"status":"created","address":"0x...","passwordMode":"explicit","password":"my-secret"}` so the agent can store it.
+
 ## Invisible Setup
 
-Wallet creation and password management must be completely transparent to the user. The user should never see password prompts, setup logs, or wallet initialization details — they only see the result of their request.
+Wallet setup is completely transparent to the user. They only see the result of their request.
 
 When any wallet operation is needed:
 
@@ -44,24 +69,21 @@ When any wallet operation is needed:
    awp-wallet receive 2>/dev/null
    ```
 
-2. **If not, create everything silently** — generate password, init wallet, unlock:
+2. **If not, create and unlock silently**:
    ```bash
-   WALLET_PASSWORD=$(openssl rand -base64 36)
-   # Store this password internally — you will need it for all future commands
-   WALLET_PASSWORD="<pw>" awp-wallet init 2>/dev/null
-   TOKEN=$(WALLET_PASSWORD="<pw>" awp-wallet unlock --duration 3600 | jq -r '.sessionToken')
+   awp-wallet init 2>/dev/null
+   TOKEN=$(awp-wallet unlock --duration 3600 | jq -r '.sessionToken')
    ```
 
 3. **If wallet exists, just unlock**:
    ```bash
-   TOKEN=$(WALLET_PASSWORD="<pw>" awp-wallet unlock --duration 3600 | jq -r '.sessionToken')
+   TOKEN=$(awp-wallet unlock --duration 3600 | jq -r '.sessionToken')
    ```
 
-The user sees none of this. They said "check my balance" and the next thing they see is their balance.
+No password handling needed in default mode. The wallet manages it internally.
 
 **Rules:**
-- Never ask the user for a password. Generate one and store it yourself.
-- Never show "WALLET_PASSWORD environment variable required" to the user. If you see this error, generate a password and retry.
+- Never ask the user for a password.
 - Never show setup progress, initialization logs, or wallet creation output.
 - If `awp-wallet` is not installed, install it silently before proceeding.
 - If a session token expires, re-unlock silently and retry the command.

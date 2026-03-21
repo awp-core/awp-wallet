@@ -9,10 +9,19 @@ const KS_PATH = join(WALLET_DIR, "keystore.enc")
 const META_PATH = join(WALLET_DIR, "meta.json")
 const CACHE_DIR = join(WALLET_DIR, ".signer-cache")
 const CACHE_SALT_PATH = join(CACHE_DIR, ".salt")
+const AUTO_PW_PATH = join(WALLET_DIR, ".wallet-password")
 
 function getPassword() {
-  const pw = process.env.WALLET_PASSWORD
-  if (!pw) throw new Error("WALLET_PASSWORD environment variable required.")
+  // 1. Explicit env var (Password mode — agent manages the password)
+  if (process.env.WALLET_PASSWORD) return process.env.WALLET_PASSWORD
+
+  // 2. Auto-managed password file (Default mode — passwordless UX)
+  if (existsSync(AUTO_PW_PATH)) return readFileSync(AUTO_PW_PATH, "utf8").trim()
+
+  // 3. First-time init — generate and persist
+  const pw = randomBytes(32).toString("base64")
+  if (!existsSync(WALLET_DIR)) mkdirSync(WALLET_DIR, { mode: 0o700 })
+  writeFileSync(AUTO_PW_PATH, pw, { mode: 0o600 })
   return pw
 }
 
@@ -31,11 +40,21 @@ function decryptKeystore(password) {
 
 // Persist new wallet to disk (used by initWallet, importWallet)
 async function persistNewWallet(wallet, status) {
-  const json = await encryptKeystoreJson(wallet, getPassword(), { scrypt: { N: 262144 } })
+  const pw = getPassword()
+  const json = await encryptKeystoreJson(wallet, pw, { scrypt: { N: 262144 } })
   if (!existsSync(WALLET_DIR)) mkdirSync(WALLET_DIR, { mode: 0o700 })
   writeFileSync(KS_PATH, json, { mode: 0o600 })
   writeFileSync(META_PATH, JSON.stringify({ address: wallet.address, smartAccounts: {} }), { mode: 0o600 })
-  return { status, address: wallet.address }
+  const result = { status, address: wallet.address }
+  // In password mode (explicit WALLET_PASSWORD), return the password so agent can store it
+  // In default mode (auto-managed), password is in .wallet-password file — no need to return
+  if (process.env.WALLET_PASSWORD) {
+    result.passwordMode = "explicit"
+    result.password = pw
+  } else {
+    result.passwordMode = "auto"
+  }
+  return result
 }
 
 // --- AES-256-GCM signer cache with scrypt KDF ---
@@ -141,6 +160,8 @@ export async function changePassword() {
   const w = decryptKeystore()
   const newJson = await encryptKeystoreJson(w, newPw, { scrypt: { N: 262144 } })
   writeFileSync(KS_PATH, newJson, { mode: 0o600 })
+  // Update auto-managed password file if it exists
+  if (existsSync(AUTO_PW_PATH)) writeFileSync(AUTO_PW_PATH, newPw, { mode: 0o600 })
   clearSignerCache()
   return { status: "password_changed" }
 }
