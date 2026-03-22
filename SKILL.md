@@ -251,14 +251,14 @@ Custom: `--chain 99999 --rpc-url https://custom.rpc.com`
 
 ## Multi-Agent Isolation
 
-Each agent can have its own wallet by setting `AWP_WALLET_ID`:
+Each agent automatically gets its own wallet. The wallet detects agent identity from:
 
-```bash
-AWP_WALLET_ID=agent-1 awp-wallet init     # creates ~/.openclaw-wallet/profiles/agent-1/
-AWP_WALLET_ID=agent-2 awp-wallet init     # creates ~/.openclaw-wallet/profiles/agent-2/
-```
+1. `AWP_WALLET_ID` env var (explicit override)
+2. OpenClaw agent workspace path (`~/.openclaw/agents/<id>/`)
+3. `OPENCLAW_PROFILE` env var
+4. `OPENCLAW_WORKSPACE` / `CLAWDBOT_WORKSPACE` env var
 
-Different IDs → different keys, different sessions, different tx history. No ID = shared default wallet.
+No configuration needed — agents running in different OpenClaw workspaces are isolated by default. Each gets its own keys, sessions, and tx history under `~/.openclaw-wallet/profiles/<id>/`.
 
 ## Gasless Mode
 
