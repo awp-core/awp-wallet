@@ -3,8 +3,7 @@ import { privateKeyToAccount } from "viem/accounts"
 import { createHash, createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto"
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from "node:fs"
 import { join } from "node:path"
-
-const WALLET_DIR = join(process.env.HOME, ".openclaw-wallet")
+import { WALLET_DIR } from "./paths.js"
 const KS_PATH = join(WALLET_DIR, "keystore.enc")
 const META_PATH = join(WALLET_DIR, "meta.json")
 const CACHE_DIR = join(WALLET_DIR, ".signer-cache")

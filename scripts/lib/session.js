@@ -2,8 +2,7 @@ import { randomBytes, createHmac, timingSafeEqual } from "node:crypto"
 import { readFileSync, writeFileSync, readdirSync, unlinkSync, existsSync, mkdirSync } from "node:fs"
 import { join } from "node:path"
 import { unlockAndCache, clearSignerCache } from "./keystore.js"
-
-const WALLET_DIR = join(process.env.HOME, ".openclaw-wallet")
+import { WALLET_DIR } from "./paths.js"
 const SESSIONS_DIR = join(WALLET_DIR, "sessions")
 const SECRET_PATH = join(WALLET_DIR, ".session-secret")
 

@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-WALLET_DIR="$HOME/.openclaw-wallet"
+# Support multi-agent isolation via AWP_WALLET_ID
+if [[ -n "${AWP_WALLET_DIR:-}" ]]; then
+  WALLET_DIR="$AWP_WALLET_DIR"
+elif [[ -n "${AWP_WALLET_ID:-}" ]]; then
+  WALLET_DIR="$HOME/.openclaw-wallet/profiles/$AWP_WALLET_ID"
+else
+  WALLET_DIR="$HOME/.openclaw-wallet"
+fi
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # 1. Install npm dependencies and register CLI command

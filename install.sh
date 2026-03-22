@@ -119,7 +119,14 @@ else
 fi
 
 # ---------- Step 4: Create runtime directories ----------
-WALLET_DIR="$HOME/.openclaw-wallet"
+# Support multi-agent isolation via AWP_WALLET_ID
+if [[ -n "${AWP_WALLET_DIR:-}" ]]; then
+  WALLET_DIR="$AWP_WALLET_DIR"
+elif [[ -n "${AWP_WALLET_ID:-}" ]]; then
+  WALLET_DIR="$HOME/.openclaw-wallet/profiles/$AWP_WALLET_ID"
+else
+  WALLET_DIR="$HOME/.openclaw-wallet"
+fi
 log "Setting up runtime directory at $WALLET_DIR..."
 mkdir -p "$WALLET_DIR" && chmod 0700 "$WALLET_DIR"
 mkdir -p "$WALLET_DIR/sessions" && chmod 0700 "$WALLET_DIR/sessions"

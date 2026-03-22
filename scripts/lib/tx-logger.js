@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto"
 import { readFileSync, appendFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
+import { WALLET_DIR } from "./paths.js"
 
-const LOG_PATH = join(process.env.HOME, ".openclaw-wallet", "tx-log.jsonl")
+const LOG_PATH = join(WALLET_DIR, "tx-log.jsonl")
 
 export function logTransaction(data) {
   // Read the last hash to maintain chain continuity

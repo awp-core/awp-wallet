@@ -2,6 +2,7 @@ import * as viemChains from "viem/chains"
 import { createPublicClient, http, defineChain, erc20Abi } from "viem"
 import { readFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
+import { WALLET_DIR } from "./paths.js"
 
 // chainId -> Chain mapping (viem built-in chains)
 const BUILTIN = new Map()
@@ -29,7 +30,7 @@ const CUSTOM = new Map()
 
 // --- Config loading (with graceful error handling) ---
 let _configCache = null
-const CONFIG_PATH = join(process.env.HOME, ".openclaw-wallet", "config.json")
+const CONFIG_PATH = join(WALLET_DIR, "config.json")
 
 export function loadConfig() {
   if (_configCache) return _configCache

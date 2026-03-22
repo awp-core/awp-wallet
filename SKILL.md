@@ -249,6 +249,17 @@ Custom: `--chain 99999 --rpc-url https://custom.rpc.com`
 
 `--asset` — symbol or address: `usdc` `usdt` `awp` `weth` `wbnb` `dai` or `0x...`
 
+## Multi-Agent Isolation
+
+Each agent can have its own wallet by setting `AWP_WALLET_ID`:
+
+```bash
+AWP_WALLET_ID=agent-1 awp-wallet init     # creates ~/.openclaw-wallet/profiles/agent-1/
+AWP_WALLET_ID=agent-2 awp-wallet init     # creates ~/.openclaw-wallet/profiles/agent-2/
+```
+
+Different IDs → different keys, different sessions, different tx history. No ID = shared default wallet.
+
 ## Gasless Mode
 
 Auto-activates when wallet has no native gas. Requires `PIMLICO_API_KEY`. Force with `--mode gasless`. The user doesn't need to know about this — just handle it.
