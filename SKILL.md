@@ -1,11 +1,10 @@
 ---
 name: awp-wallet
 description: >
-  Use when the user says "send ETH/USDC/tokens to 0x...", "check my
-  balance", "approve USDC for a contract", "sign this message", "how
-  much gas", or anything involving crypto transfers, wallet balances,
-  token approvals, EIP-712 signing, or on-chain operations. Supports
-  400+ EVM chains with auto-gasless when no native gas is available.
+  Use when the user wants to send crypto, check balance, approve tokens,
+  sign messages, estimate gas, or any on-chain wallet operation. Covers
+  "send ETH to 0x...", "how much USDC do I have", "approve spending",
+  "sign this for me". 400+ EVM chains, auto-gasless, multi-agent isolated.
 metadata:
   openclaw:
     requires:
