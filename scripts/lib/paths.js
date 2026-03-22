@@ -1,41 +1,18 @@
-import { join, basename } from "node:path"
-import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, renameSync } from "node:fs"
-import { createHash } from "node:crypto"
+import { join } from "node:path"
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from "node:fs"
 
 const BASE_DIR = join(process.env.HOME, ".openclaw-wallet")
 const WALLETS_DIR = join(BASE_DIR, "wallets")
 const REGISTRY_PATH = join(BASE_DIR, "wallets.json")
 
-// Generate wallet ID from environment context
-function deriveWalletId() {
-  const parts = []
-
-  const cwd = process.cwd()
-  const agentsMatch = cwd.match(/\.openclaw\/agents\/([^/]+)/)
-  if (agentsMatch) parts.push(agentsMatch[1])
-
-  if (process.env.OPENCLAW_PROFILE && process.env.OPENCLAW_PROFILE !== "default") {
-    parts.push(process.env.OPENCLAW_PROFILE)
-  }
-
-  for (const key of ["OPENCLAW_WORKSPACE", "CLAWDBOT_WORKSPACE"]) {
-    if (process.env[key]) {
-      const name = basename(process.env[key])
-      if (name && name !== "workspace") parts.push(name)
-    }
-  }
-
-  if (parts.length === 0) return null
-
-  const raw = parts[0]
-  if (/^[a-z0-9_-]+$/i.test(raw) && raw.length <= 24) return raw
-  return createHash("sha256").update(parts.join(":")).digest("hex").slice(0, 12)
-}
-
-// Resolve: explicit > auto-detect > "default"
+// Wallet ID resolution priority:
+// 1. AWP_SESSION_ID — per-session isolation (most granular)
+// 2. AWP_AGENT_ID  — per-agent isolation (shared across sessions)
+// 3. "default"     — no isolation (all agents share one wallet)
 function resolveWalletId() {
-  if (process.env.AWP_WALLET_ID) return process.env.AWP_WALLET_ID
-  return deriveWalletId() || "default"
+  if (process.env.AWP_SESSION_ID) return process.env.AWP_SESSION_ID
+  if (process.env.AWP_AGENT_ID) return process.env.AWP_AGENT_ID
+  return "default"
 }
 
 export const walletId = resolveWalletId()
@@ -60,20 +37,21 @@ if (existsSync(join(BASE_DIR, "keystore.enc")) && !existsSync(join(WALLETS_DIR, 
   }
 }
 
-// Wallet directory for current agent
+// Wallet directory for current context
 export const WALLET_DIR = join(WALLETS_DIR, walletId)
 
-// Register wallet in the wallets.json registry
+// Register wallet in registry
 export function registerWallet(address) {
   let registry = {}
   if (existsSync(REGISTRY_PATH)) {
     try { registry = JSON.parse(readFileSync(REGISTRY_PATH, "utf8")) } catch {}
   }
+  const source = process.env.AWP_SESSION_ID ? "session" : (process.env.AWP_AGENT_ID ? "agent" : "default")
   registry[walletId] = {
     address,
     createdAt: registry[walletId]?.createdAt || new Date().toISOString(),
     lastUsed: new Date().toISOString(),
-    source: process.env.AWP_WALLET_ID ? "explicit" : (deriveWalletId() ? "auto" : "default"),
+    source,
   }
   if (!existsSync(BASE_DIR)) mkdirSync(BASE_DIR, { mode: 0o700 })
   writeFileSync(REGISTRY_PATH, JSON.stringify(registry, null, 2), { mode: 0o600 })
