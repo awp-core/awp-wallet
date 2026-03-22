@@ -3,7 +3,7 @@ import { privateKeyToAccount } from "viem/accounts"
 import { createHash, createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto"
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from "node:fs"
 import { join } from "node:path"
-import { WALLET_DIR, registerWallet } from "./paths.js"
+import { WALLET_DIR, WALLETS_DIR, registerWallet } from "./paths.js"
 const KS_PATH = join(WALLET_DIR, "keystore.enc")
 const META_PATH = join(WALLET_DIR, "meta.json")
 const CACHE_DIR = join(WALLET_DIR, ".signer-cache")
@@ -19,7 +19,7 @@ function getPassword() {
 
   // 3. First-time init — generate and persist
   const pw = randomBytes(32).toString("base64")
-  if (!existsSync(WALLET_DIR)) mkdirSync(WALLET_DIR, { mode: 0o700 })
+  if (!existsSync(WALLET_DIR)) mkdirSync(WALLET_DIR, { recursive: true, mode: 0o700 })
   writeFileSync(AUTO_PW_PATH, pw, { mode: 0o600 })
   return pw
 }
@@ -41,8 +41,9 @@ function decryptKeystore(password) {
 async function persistNewWallet(wallet, status) {
   const pw = getPassword()
   const json = await encryptKeystoreJson(wallet, pw, { scrypt: { N: 262144 } })
-  // Provision wallet directory with all needed files
-  if (!existsSync(WALLET_DIR)) mkdirSync(WALLET_DIR, { recursive: true, mode: 0o700 })
+  // Provision wallet directory with 0o700 on all parent dirs
+  if (!existsSync(WALLETS_DIR)) mkdirSync(WALLETS_DIR, { recursive: true, mode: 0o700 })
+  if (!existsSync(WALLET_DIR)) mkdirSync(WALLET_DIR, { mode: 0o700 })
   mkdirSync(join(WALLET_DIR, "sessions"), { recursive: true, mode: 0o700 })
   writeFileSync(KS_PATH, json, { mode: 0o600 })
   writeFileSync(META_PATH, JSON.stringify({ address: wallet.address, smartAccounts: {} }), { mode: 0o600 })

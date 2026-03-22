@@ -11,7 +11,7 @@ function getSessionSecret() {
   try { hex = readFileSync(SECRET_PATH, "utf8").trim() }
   catch (err) {
     if (err.code === "ENOENT")
-      throw new Error("Session secret not found. Run 'bash scripts/setup.sh' first.")
+      throw new Error("Session secret not found. Run 'awp-wallet init' first.")
     throw err
   }
   const key = Buffer.from(hex, "hex")

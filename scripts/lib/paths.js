@@ -19,8 +19,9 @@ export const walletId = resolveWalletId()
 
 // Backward compat: migrate old root-level wallet to wallets/default/
 if (existsSync(join(BASE_DIR, "keystore.enc")) && !existsSync(join(WALLETS_DIR, "default", "keystore.enc"))) {
+  mkdirSync(WALLETS_DIR, { recursive: true, mode: 0o700 })
   const defaultDir = join(WALLETS_DIR, "default")
-  mkdirSync(defaultDir, { recursive: true, mode: 0o700 })
+  mkdirSync(defaultDir, { mode: 0o700 })
   for (const f of ["keystore.enc", "meta.json", ".wallet-password", ".session-secret", "tx-log.jsonl", "config.json"]) {
     const src = join(BASE_DIR, f)
     if (existsSync(src)) {
@@ -53,7 +54,7 @@ export function registerWallet(address) {
     lastUsed: new Date().toISOString(),
     source,
   }
-  if (!existsSync(BASE_DIR)) mkdirSync(BASE_DIR, { mode: 0o700 })
+  if (!existsSync(WALLETS_DIR)) mkdirSync(WALLETS_DIR, { recursive: true, mode: 0o700 })
   writeFileSync(REGISTRY_PATH, JSON.stringify(registry, null, 2), { mode: 0o600 })
 }
 

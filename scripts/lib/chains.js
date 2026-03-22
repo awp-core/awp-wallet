@@ -39,7 +39,7 @@ export function loadConfig() {
     return _configCache
   } catch (err) {
     if (err.code === "ENOENT")
-      throw new Error("Config not found. Run 'bash scripts/setup.sh' first.")
+      throw new Error("Config not found. Run 'awp-wallet init' first.")
     if (err instanceof SyntaxError)
       throw new Error("Config file corrupted. Delete and re-run setup.sh.")
     throw err

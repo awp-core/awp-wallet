@@ -119,35 +119,37 @@ else
 fi
 
 # ---------- Step 4: Create runtime directories ----------
-WALLET_DIR="${AWP_WALLET_DIR:-$HOME/.openclaw-wallet}"
-log "Setting up runtime directory at $WALLET_DIR..."
-mkdir -p "$WALLET_DIR" && chmod 0700 "$WALLET_DIR"
-mkdir -p "$WALLET_DIR/sessions" && chmod 0700 "$WALLET_DIR/sessions"
-mkdir -p "$WALLET_DIR/.signer-cache" && chmod 0700 "$WALLET_DIR/.signer-cache"
+BASE_WALLET_DIR="${AWP_WALLET_DIR:-$HOME/.openclaw-wallet}"
+PROFILE_DIR="$BASE_WALLET_DIR/wallets/default"
+log "Setting up runtime directory at $BASE_WALLET_DIR..."
+mkdir -p "$BASE_WALLET_DIR" && chmod 0700 "$BASE_WALLET_DIR"
+mkdir -p "$BASE_WALLET_DIR/wallets" && chmod 0700 "$BASE_WALLET_DIR/wallets"
+mkdir -p "$PROFILE_DIR" && chmod 0700 "$PROFILE_DIR"
+mkdir -p "$PROFILE_DIR/sessions" && chmod 0700 "$PROFILE_DIR/sessions"
 
-# Copy default config (don't overwrite existing)
-if [[ ! -f "$WALLET_DIR/config.json" ]]; then
-  cp "$INSTALL_DIR/assets/default-config.json" "$WALLET_DIR/config.json"
-  chmod 0600 "$WALLET_DIR/config.json"
-  log "Default config copied (10 chains, 3 bundler providers)"
+# Copy default config to profile (don't overwrite existing)
+if [[ ! -f "$PROFILE_DIR/config.json" ]]; then
+  cp "$INSTALL_DIR/assets/default-config.json" "$PROFILE_DIR/config.json"
+  chmod 0600 "$PROFILE_DIR/config.json"
+  log "Default config copied (16 chains, 3 bundler providers)"
 else
   log "Config already exists, preserved"
 fi
 
-# Generate HMAC session secret (don't overwrite existing)
-if [[ ! -f "$WALLET_DIR/.session-secret" ]]; then
-  openssl rand -hex 32 > "$WALLET_DIR/.session-secret"
-  chmod 0600 "$WALLET_DIR/.session-secret"
+# Generate HMAC session secret in profile (don't overwrite existing)
+if [[ ! -f "$PROFILE_DIR/.session-secret" ]]; then
+  openssl rand -hex 32 > "$PROFILE_DIR/.session-secret"
+  chmod 0600 "$PROFILE_DIR/.session-secret"
 fi
 
 # ---------- Step 5: Update BSC RPC if provided ----------
 if [[ -n "$BSC_RPC_URL" ]]; then
   # Update config.json rpcOverrides.bsc (use env vars to prevent shell injection)
-  WALLET_DIR="$WALLET_DIR" BSC_RPC_URL="$BSC_RPC_URL" node -e "
+  PROFILE_DIR="$PROFILE_DIR" BSC_RPC_URL="$BSC_RPC_URL" node -e "
     const fs = require('fs');
-    const cfg = JSON.parse(fs.readFileSync(process.env.WALLET_DIR + '/config.json', 'utf8'));
+    const cfg = JSON.parse(fs.readFileSync(process.env.PROFILE_DIR + '/config.json', 'utf8'));
     cfg.rpcOverrides.bsc = process.env.BSC_RPC_URL;
-    fs.writeFileSync(process.env.WALLET_DIR + '/config.json', JSON.stringify(cfg, null, 2));
+    fs.writeFileSync(process.env.PROFILE_DIR + '/config.json', JSON.stringify(cfg, null, 2));
   "
   log "BSC RPC configured"
 fi
