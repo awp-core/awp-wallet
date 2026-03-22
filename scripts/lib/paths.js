@@ -1,23 +1,18 @@
 import { join, basename } from "node:path"
-import { existsSync } from "node:fs"
 
 // Auto-detect agent identity from platform environment
 function detectAgentId() {
-  // 1. Explicit override — always wins
-  if (process.env.AWP_WALLET_ID) return process.env.AWP_WALLET_ID
-
-  // 2. OpenClaw: check if running inside an agent workspace
-  //    OpenClaw agents run in ~/.openclaw/agents/<agentId>/ or custom workspace
+  // 1. OpenClaw: running inside agent workspace (~/.openclaw/agents/<id>/)
   const cwd = process.cwd()
   const agentsMatch = cwd.match(/\.openclaw\/agents\/([^/]+)/)
   if (agentsMatch) return agentsMatch[1]
 
-  // 3. OpenClaw: OPENCLAW_PROFILE env var
+  // 2. OpenClaw: profile env var
   if (process.env.OPENCLAW_PROFILE && process.env.OPENCLAW_PROFILE !== "default") {
     return process.env.OPENCLAW_PROFILE
   }
 
-  // 4. OpenClaw: workspace path from OPENCLAW_WORKSPACE or CLAWDBOT_WORKSPACE
+  // 3. OpenClaw: workspace env var
   for (const key of ["OPENCLAW_WORKSPACE", "CLAWDBOT_WORKSPACE"]) {
     if (process.env[key]) {
       const name = basename(process.env[key])
@@ -25,14 +20,15 @@ function detectAgentId() {
     }
   }
 
-  // 5. No agent identity detected — use shared default
+  // 4. No agent identity — shared default
   return null
 }
 
-// Wallet directory — supports multi-agent isolation
-// Priority: AWP_WALLET_DIR > AWP_WALLET_ID > auto-detect > default
 const agentId = detectAgentId()
 
+// AWP_WALLET_DIR = full path override (advanced)
+// Auto-detect = profiles/<agentId>/ (from OpenClaw context)
+// Default = ~/.openclaw-wallet/ (no agent context)
 export const WALLET_DIR = process.env.AWP_WALLET_DIR
   || (agentId
     ? join(process.env.HOME, ".openclaw-wallet", "profiles", agentId)
