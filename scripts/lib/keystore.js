@@ -3,7 +3,7 @@ import { privateKeyToAccount } from "viem/accounts"
 import { createHash, createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto"
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from "node:fs"
 import { join } from "node:path"
-import { WALLET_DIR } from "./paths.js"
+import { WALLET_DIR, registerWallet } from "./paths.js"
 const KS_PATH = join(WALLET_DIR, "keystore.enc")
 const META_PATH = join(WALLET_DIR, "meta.json")
 const CACHE_DIR = join(WALLET_DIR, ".signer-cache")
@@ -41,12 +41,26 @@ function decryptKeystore(password) {
 async function persistNewWallet(wallet, status) {
   const pw = getPassword()
   const json = await encryptKeystoreJson(wallet, pw, { scrypt: { N: 262144 } })
-  if (!existsSync(WALLET_DIR)) mkdirSync(WALLET_DIR, { mode: 0o700 })
+  // Provision wallet directory with all needed files
+  if (!existsSync(WALLET_DIR)) mkdirSync(WALLET_DIR, { recursive: true, mode: 0o700 })
+  mkdirSync(join(WALLET_DIR, "sessions"), { recursive: true, mode: 0o700 })
   writeFileSync(KS_PATH, json, { mode: 0o600 })
   writeFileSync(META_PATH, JSON.stringify({ address: wallet.address, smartAccounts: {} }), { mode: 0o600 })
+  // Copy default config if not present
+  const configPath = join(WALLET_DIR, "config.json")
+  if (!existsSync(configPath)) {
+    const defaultConfig = join(import.meta.dirname, "..", "..", "assets", "default-config.json")
+    if (existsSync(defaultConfig)) writeFileSync(configPath, readFileSync(defaultConfig), { mode: 0o600 })
+  }
+  // Generate session secret if not present
+  const secretPath = join(WALLET_DIR, ".session-secret")
+  if (!existsSync(secretPath)) {
+    writeFileSync(secretPath, randomBytes(32).toString("hex"), { mode: 0o600 })
+  }
+  // Register in wallet registry
+  registerWallet(wallet.address)
+
   const result = { status, address: wallet.address }
-  // In password mode (explicit WALLET_PASSWORD), return the password so agent can store it
-  // In default mode (auto-managed), password is in .wallet-password file — no need to return
   if (process.env.WALLET_PASSWORD) {
     result.passwordMode = "explicit"
     result.password = pw

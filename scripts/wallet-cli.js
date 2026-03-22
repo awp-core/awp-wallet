@@ -404,5 +404,23 @@ cli.command("sign-typed-data")
     } catch (e) { fail(e.message) }
   })
 
+cli.command("wallets")
+  .description("List all wallet profiles")
+  .action(async () => {
+    try {
+      const { listWallets, walletId } = await import("./lib/paths.js")
+      json({ currentWalletId: walletId, wallets: listWallets() })
+    } catch (e) { fail(e.message) }
+  })
+
+cli.command("wallet-id")
+  .description("Show current wallet ID")
+  .action(async () => {
+    try {
+      const { walletId, WALLET_DIR } = await import("./lib/paths.js")
+      json({ walletId, walletDir: WALLET_DIR })
+    } catch (e) { fail(e.message) }
+  })
+
 // --- Run ---
 cli.parseAsync(process.argv).catch(e => fail(e.message))
