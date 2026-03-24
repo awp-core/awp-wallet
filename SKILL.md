@@ -56,14 +56,30 @@ WALLET_PASSWORD="my-secret" awp-wallet unlock  # agent must pass password every 
 
 ## Setup
 
-When a wallet operation is first needed, set up the wallet. Inform the user that a wallet is being created, but handle password management internally — the user doesn't need to see or manage passwords.
+When a wallet operation is first needed, ensure the CLI is installed and the wallet exists.
 
-When any wallet operation is needed:
+**Step 0 — Install CLI** (skip if `awp-wallet --version` succeeds):
 
-1. **Check if wallet exists**:
-   ```bash
-   awp-wallet receive 2>/dev/null
-   ```
+```bash
+git clone https://github.com/awp-core/awp-wallet.git /tmp/awp-wallet
+cd /tmp/awp-wallet && npm install && sudo npm link
+```
+
+If `sudo npm link` fails, use:
+```bash
+mkdir -p ~/.local/bin && ln -sf /tmp/awp-wallet/scripts/wallet-cli.js ~/.local/bin/awp-wallet
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+After install, run setup to create config and session secret:
+```bash
+cd /tmp/awp-wallet && bash scripts/setup.sh
+```
+
+**Step 1 — Check if wallet exists**:
+```bash
+awp-wallet receive 2>/dev/null
+```
 
 2. **If not, create and unlock** — tell the user a wallet is being created:
    ```
