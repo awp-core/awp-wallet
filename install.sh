@@ -139,29 +139,12 @@ if [[ "$REGISTERED" == false ]]; then
   fi
 fi
 
-# Final verification — search common locations if not in PATH
+# Final verification
 if ! command -v awp-wallet &>/dev/null; then
-  AWP_BIN=""
-  for SEARCH_DIR in "$HOME/.local/bin" "$INSTALL_DIR/scripts" "/usr/local/bin" "/usr/bin"; do
-    if [[ -x "$SEARCH_DIR/awp-wallet" ]]; then
-      AWP_BIN="$SEARCH_DIR/awp-wallet"
-      break
-    fi
-  done
-  # Also check the wallet-cli.js entry point directly
-  if [[ -z "$AWP_BIN" && -x "$INSTALL_DIR/scripts/wallet-cli.js" ]]; then
-    AWP_BIN="$INSTALL_DIR/scripts/wallet-cli.js"
-  fi
-
-  if [[ -n "$AWP_BIN" ]]; then
-    log "Found awp-wallet at: $AWP_BIN (not in PATH, using absolute path)"
-    CLI=("$AWP_BIN")
-  else
-    err "Failed to register awp-wallet. Add manually: export PATH=\"\$HOME/.local/bin:\$PATH\""
-  fi
-else
-  CLI=(awp-wallet)
+  err "Failed to register awp-wallet in PATH. Add manually: export PATH=\"\$HOME/.local/bin:\$PATH\""
 fi
+
+CLI=(awp-wallet)
 
 # ---------- Step 4: Create runtime directories ----------
 BASE_DIR="$HOME/.openclaw-wallet"
@@ -254,5 +237,5 @@ if [[ -n "${USER_PROVIDED_PASSWORD:-}" ]]; then
 fi
 
 cat <<ENDJSON
-{"status":"installed","installDir":"$INSTALL_DIR","profileId":"$PROFILE_ID","profileDir":"$PROFILE_DIR","passwordMode":"$PMODE","address":"${ADDRESS:-null}","command":"${CLI[*]}","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
+{"status":"installed","installDir":"$INSTALL_DIR","profileId":"$PROFILE_ID","profileDir":"$PROFILE_DIR","passwordMode":"$PMODE","address":"${ADDRESS:-null}","command":"awp-wallet","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
 ENDJSON
