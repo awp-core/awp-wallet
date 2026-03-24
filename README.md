@@ -10,7 +10,7 @@
     <img src="https://img.shields.io/badge/EVM-400%2B_Chains-6C47FF?style=flat" alt="EVM">
     <img src="https://img.shields.io/badge/ERC--4337-Gasless-F0B90B?style=flat" alt="ERC-4337">
     <img src="https://img.shields.io/badge/Self--Custodial-16A34A?style=flat&logo=ethereum&logoColor=white" alt="Self-Custodial">
-    <img src="https://img.shields.io/badge/26_CLI_Commands-1a1a1a?style=flat&logo=windowsterminal&logoColor=white" alt="CLI">
+    <img src="https://img.shields.io/badge/28_CLI_Commands-1a1a1a?style=flat&logo=windowsterminal&logoColor=white" alt="CLI">
     <img src="https://img.shields.io/badge/144_Tests-0_Failures-brightgreen?style=flat" alt="Tests">
     <img src="https://img.shields.io/badge/License-MIT-97CA00?style=flat" alt="MIT">
   </p>
@@ -59,10 +59,12 @@
   {
     "status": "installed",
     "installDir": "/home/user/awp-wallet",
-    "walletDir": "/home/user/.awp-wallet",
-    "walletPassword": "auto-generated-48-char-password",
+    "profileId": "default",
+    "profileDir": "/home/user/.openclaw-wallet/wallets/default",
+    "passwordMode": "auto",
     "address": "0x...",
-    "command": "awp-wallet"
+    "command": "awp-wallet",
+    "pimlicoEnabled": false
   }
   ```
 
@@ -162,7 +164,7 @@
   - **Dual-mode** — Direct EOA (default) or gasless ERC-4337 (auto when no gas)
   - **Self-custodial** — Private keys never leave the wallet process
   - **16 preconfigured chains** — Ethereum, Base, BSC, Arbitrum, Optimism, Polygon, Avalanche, Fantom, zkSync, Linea, Scroll, Mantle, Blast, Celo + testnets
-  - **26 commands** — Send, balance, approve, revoke, sign, estimate, batch, and more
+  - **28 commands** — Send, balance, approve, revoke, sign, estimate, batch, and more
   - **144 tests** — Integration + E2E, 0 failures
 
   ## Commands

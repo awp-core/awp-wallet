@@ -376,7 +376,7 @@ cli.command("deploy-4337")
       const chain = await resolveChain()
       const { requireScope } = await import("./lib/session.js")
       requireScope(opts.token, "full")
-      json({ status: "deploy", note: "Smart Account is deployed automatically on first gasless transaction.", chain })
+      json({ status: "auto_deploy_on_first_use", note: "Smart Account is deployed automatically on first gasless transaction.", chain })
     } catch (e) { fail(e.message) }
   })
 

@@ -166,6 +166,9 @@ awp-wallet status --token $T                                               # add
 awp-wallet wallets                                                         # list all wallet profiles
 awp-wallet wallet-id                                                       # current wallet ID
 awp-wallet verify-log                                                      # audit log integrity
+awp-wallet upgrade-7702 --token $T --chain ethereum                        # upgrade EOA via EIP-7702
+awp-wallet revoke-7702 --token $T --chain ethereum                         # revoke EIP-7702 delegation
+awp-wallet deploy-4337 --token $T --chain ethereum                         # check smart account status
 WALLET_PASSWORD="<pw>" awp-wallet export                                   # export seed (requires explicit password)
 WALLET_PASSWORD="<old>" NEW_WALLET_PASSWORD="<new>" awp-wallet change-password
 ```
