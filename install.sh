@@ -111,11 +111,11 @@ else
   fi
 fi
 
-# CLI command to use
+# CLI command (as array for space-safe invocation)
 if command -v awp-wallet &>/dev/null; then
-  CLI="awp-wallet"
+  CLI=(awp-wallet)
 else
-  CLI="node $INSTALL_DIR/scripts/wallet-cli.js"
+  CLI=(node "$INSTALL_DIR/scripts/wallet-cli.js")
 fi
 
 # ---------- Step 4: Create runtime directories ----------
@@ -137,9 +137,9 @@ run_cli() {
   [[ -n "$SESSION_ID" ]] && extra_env+=(AWP_SESSION_ID="$SESSION_ID")
   [[ -n "$AGENT_ID" ]] && extra_env+=(AWP_AGENT_ID="$AGENT_ID")
   if [[ ${#extra_env[@]} -gt 0 ]]; then
-    env "${extra_env[@]}" $CLI "$@"
+    env "${extra_env[@]}" "${CLI[@]}" "$@"
   else
-    $CLI "$@"
+    "${CLI[@]}" "$@"
   fi
 }
 
@@ -196,7 +196,7 @@ echo "" >&2
 echo -e "${CYAN}  AWP Wallet installed successfully!${NC}" >&2
 echo -e "  ${GREEN}Install dir:${NC}  $INSTALL_DIR" >&2
 echo -e "  ${GREEN}Profile:${NC}      $PROFILE_ID ($PROFILE_DIR)" >&2
-echo -e "  ${GREEN}Command:${NC}      $CLI" >&2
+echo -e "  ${GREEN}Command:${NC}      ${CLI[*]}" >&2
 if [[ -n "$ADDRESS" ]]; then
   echo -e "  ${GREEN}Address:${NC}      $ADDRESS" >&2
 fi
@@ -211,5 +211,5 @@ if [[ -n "${USER_PROVIDED_PASSWORD:-}" ]]; then
 fi
 
 cat <<ENDJSON
-{"status":"installed","installDir":"$INSTALL_DIR","profileId":"$PROFILE_ID","profileDir":"$PROFILE_DIR","passwordMode":"$PMODE",${PW_JSON}"address":"${ADDRESS:-null}","command":"$CLI","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
+{"status":"installed","installDir":"$INSTALL_DIR","profileId":"$PROFILE_ID","profileDir":"$PROFILE_DIR","passwordMode":"$PMODE",${PW_JSON}"address":"${ADDRESS:-null}","command":"${CLI[*]}","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
 ENDJSON

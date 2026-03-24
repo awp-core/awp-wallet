@@ -50,7 +50,7 @@
   1. Install npm dependencies
   2. Register `awp-wallet` as a global command
   3. Create runtime directory (`~/.openclaw-wallet/`) with strict permissions
-  4. Generate a 48-char random wallet password
+  4. Generate a random wallet password (auto-managed)
   5. Initialize the wallet and verify the full lifecycle
 
   Output (JSON to stdout):

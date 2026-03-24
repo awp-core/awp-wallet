@@ -21,7 +21,7 @@ export const walletId = resolveWalletId()
 if (existsSync(join(BASE_DIR, "keystore.enc")) && !existsSync(join(WALLETS_DIR, "default", "keystore.enc"))) {
   mkdirSync(WALLETS_DIR, { recursive: true, mode: 0o700 })
   const defaultDir = join(WALLETS_DIR, "default")
-  mkdirSync(defaultDir, { mode: 0o700 })
+  mkdirSync(defaultDir, { recursive: true, mode: 0o700 })
   for (const f of ["keystore.enc", "meta.json", ".wallet-password", ".session-secret", "tx-log.jsonl", "config.json"]) {
     const src = join(BASE_DIR, f)
     if (existsSync(src)) {
@@ -55,7 +55,10 @@ export function registerWallet(address) {
     source,
   }
   if (!existsSync(WALLETS_DIR)) mkdirSync(WALLETS_DIR, { recursive: true, mode: 0o700 })
-  writeFileSync(REGISTRY_PATH, JSON.stringify(registry, null, 2), { mode: 0o600 })
+  // Atomic write: write to tmp then rename (prevents corruption on crash)
+  const tmp = REGISTRY_PATH + ".tmp." + process.pid
+  writeFileSync(tmp, JSON.stringify(registry, null, 2), { mode: 0o600 })
+  renameSync(tmp, REGISTRY_PATH)
 }
 
 // List all wallets
