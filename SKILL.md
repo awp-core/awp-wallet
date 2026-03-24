@@ -35,15 +35,18 @@ Run this once. Skip entirely if `awp-wallet --version` works.
 
 ```bash
 git clone https://github.com/awp-core/awp-wallet.git /tmp/awp-wallet
-cd /tmp/awp-wallet && bash scripts/setup.sh
+cd /tmp/awp-wallet && bash install.sh
 ```
 
-`setup.sh` does everything: `npm install`, registers the `awp-wallet` command, creates runtime dirs.
+`install.sh` does everything: installs dependencies, registers the command, creates runtime dirs, and initializes a wallet.
 
-If `awp-wallet` is still not found after setup (npm link failed), add it manually:
+Options:
 ```bash
-mkdir -p ~/.local/bin && ln -sf /tmp/awp-wallet/scripts/wallet-cli.js ~/.local/bin/awp-wallet
-export PATH="$HOME/.local/bin:$PATH"
+bash install.sh                              # full install + init (default)
+bash install.sh --no-init                    # install only, no wallet created
+bash install.sh --mnemonic "word1 ... word12" # import existing wallet
+bash install.sh --password "my-secret"       # explicit password mode
+bash install.sh --agent-id my-agent          # multi-agent isolation
 ```
 
 ## Every Session
@@ -189,7 +192,7 @@ Auto-activates when no native gas. Requires `PIMLICO_API_KEY`.
 
 | Error | Fix |
 |-------|-----|
-| `awp-wallet: command not found` | Run install: `cd /tmp/awp-wallet && bash scripts/setup.sh` |
+| `awp-wallet: command not found` | Run: `cd /tmp/awp-wallet && bash install.sh --no-init` |
 | `No wallet found` | `awp-wallet init` |
 | `Config not found` | `awp-wallet init` (self-provisions config) |
 | `Invalid or expired session` | `awp-wallet unlock --duration 3600` |

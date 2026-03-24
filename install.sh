@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AWP Wallet — One-click deployment script
+# AWP Wallet — Install & Setup
 #
 # Usage:
 #   bash install.sh [OPTIONS]
 #
 # Options:
-#   --dir <path>        Installation directory (default: ~/awp-wallet)
-#   --password <pwd>    Wallet password (default: auto-managed, no password needed)
-#   --no-init           Skip wallet initialization (setup only)
-#   --pimlico <key>     Set PIMLICO_API_KEY for gasless transactions
-#   --help              Show this help message
+#   --dir <path>          Installation directory (default: ~/awp-wallet)
+#   --no-init             Install only, do not create a wallet
+#   --password <pwd>      Use explicit password (default: auto-managed)
+#   --mnemonic <phrase>   Import existing wallet from seed phrase
+#   --pimlico <key>       Set PIMLICO_API_KEY for gasless transactions
+#   --agent-id <id>       Wallet profile ID (multi-agent isolation)
+#   --session-id <id>     Wallet session ID (per-session isolation)
+#   --help                Show this help
 # ==============================================================================
 set -euo pipefail
 
@@ -18,14 +21,17 @@ set -euo pipefail
 INSTALL_DIR="$HOME/awp-wallet"
 WALLET_PASSWORD=""
 AUTO_INIT=true
+MNEMONIC=""
 PIMLICO_API_KEY=""
 ADDRESS=""
+AGENT_ID=""
+SESSION_ID=""
 REPO_URL="https://github.com/awp-core/awp-wallet.git"
 
 # ---------- Colors (stderr only) ----------
-RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
+RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
@@ -36,39 +42,34 @@ err()  { echo -e "${RED}[awp-wallet]${NC} $*" >&2; exit 1; }
 # ---------- Parse arguments ----------
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --dir)        INSTALL_DIR="$2"; shift 2 ;;
-    --password)   WALLET_PASSWORD="$2"; USER_PROVIDED_PASSWORD=true; shift 2 ;;
-    --no-init)    AUTO_INIT=false; shift ;;
-    --pimlico)    PIMLICO_API_KEY="$2"; shift 2 ;;
-    --help|-h)
-      head -14 "$0" | tail -9
-      exit 0 ;;
-    *) err "Unknown option: $1. Use --help for usage." ;;
+    --dir)          INSTALL_DIR="$2"; shift 2 ;;
+    --no-init)      AUTO_INIT=false; shift ;;
+    --password)     WALLET_PASSWORD="$2"; USER_PROVIDED_PASSWORD=true; shift 2 ;;
+    --mnemonic)     MNEMONIC="$2"; shift 2 ;;
+    --pimlico)      PIMLICO_API_KEY="$2"; shift 2 ;;
+    --agent-id)     AGENT_ID="$2"; shift 2 ;;
+    --session-id)   SESSION_ID="$2"; shift 2 ;;
+    --help|-h)      head -18 "$0" | tail -13; exit 0 ;;
+    *)              err "Unknown option: $1. Use --help." ;;
   esac
 done
 
-# ---------- Pre-flight checks ----------
+# ---------- Pre-flight ----------
 log "Checking prerequisites..."
 
 if ! command -v node &>/dev/null; then
   err "Node.js not found. Install Node.js >= 20: https://nodejs.org/"
 fi
-NODE_VERSION=$(node -v | sed 's/v//' | cut -d. -f1)
-if [[ "$NODE_VERSION" -lt 20 ]]; then
+NODE_VER=$(node -v | sed 's/v//' | cut -d. -f1)
+if [[ "$NODE_VER" -lt 20 ]]; then
   err "Node.js >= 20 required (found: $(node -v))."
 fi
-
-if ! command -v npm &>/dev/null; then
-  err "npm not found."
-fi
-
-if ! command -v git &>/dev/null; then
-  err "git not found. Install: sudo apt install git"
-fi
+command -v npm &>/dev/null || err "npm not found."
+command -v git &>/dev/null || err "git not found."
 
 log "Node.js $(node -v), npm $(npm -v)"
 
-# ---------- Step 1: Clone or update ----------
+# ---------- Step 1: Get source code ----------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ -d "$INSTALL_DIR/.git" ]]; then
@@ -95,30 +96,21 @@ npm install --no-audit --no-fund 2>&1 | tail -1
 
 # ---------- Step 3: Register CLI command ----------
 log "Registering awp-wallet command..."
-CLI_REGISTERED=false
 if npm link 2>/dev/null; then
-  CLI_REGISTERED=true
   log "Registered: $(which awp-wallet 2>/dev/null || echo 'awp-wallet')"
 elif sudo npm link 2>/dev/null; then
-  CLI_REGISTERED=true
   log "Registered (sudo): $(which awp-wallet 2>/dev/null || echo 'awp-wallet')"
-fi
-
-# Fallback: add to PATH via symlink in ~/.local/bin
-if [[ "$CLI_REGISTERED" == false ]]; then
+else
   mkdir -p "$HOME/.local/bin"
   ln -sf "$INSTALL_DIR/scripts/wallet-cli.js" "$HOME/.local/bin/awp-wallet"
   chmod +x "$INSTALL_DIR/scripts/wallet-cli.js"
-  if echo "$PATH" | grep -q "$HOME/.local/bin"; then
-    CLI_REGISTERED=true
-    log "Registered: ~/.local/bin/awp-wallet"
-  else
-    warn "Added to ~/.local/bin/awp-wallet. Add to PATH: export PATH=\"\$HOME/.local/bin:\$PATH\""
-    CLI_REGISTERED=true
+  log "Registered: ~/.local/bin/awp-wallet"
+  if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
+    warn "Add to PATH: export PATH=\"\$HOME/.local/bin:\$PATH\""
   fi
 fi
 
-# Determine how to call the CLI
+# CLI command to use
 if command -v awp-wallet &>/dev/null; then
   CLI="awp-wallet"
 else
@@ -127,10 +119,21 @@ fi
 
 # ---------- Step 4: Create runtime directories ----------
 BASE_DIR="$HOME/.openclaw-wallet"
-PROFILE_DIR="$BASE_DIR/wallets/default"
-log "Setting up runtime directory..."
 mkdir -p "$BASE_DIR" && chmod 0700 "$BASE_DIR"
 mkdir -p "$BASE_DIR/wallets" && chmod 0700 "$BASE_DIR/wallets"
+
+# Determine profile directory
+PROFILE_ID="default"
+ENV_ARGS=""
+if [[ -n "$SESSION_ID" ]]; then
+  PROFILE_ID="$SESSION_ID"
+  ENV_ARGS="AWP_SESSION_ID=$SESSION_ID"
+elif [[ -n "$AGENT_ID" ]]; then
+  PROFILE_ID="$AGENT_ID"
+  ENV_ARGS="AWP_AGENT_ID=$AGENT_ID"
+fi
+
+PROFILE_DIR="$BASE_DIR/wallets/$PROFILE_ID"
 mkdir -p "$PROFILE_DIR" && chmod 0700 "$PROFILE_DIR"
 mkdir -p "$PROFILE_DIR/sessions" && chmod 0700 "$PROFILE_DIR/sessions"
 
@@ -144,45 +147,56 @@ if [[ ! -f "$PROFILE_DIR/.session-secret" ]]; then
   chmod 0600 "$PROFILE_DIR/.session-secret"
 fi
 
+log "Profile: $PROFILE_ID ($PROFILE_DIR)"
+
 # ---------- Step 5: Initialize wallet ----------
 if [[ "$AUTO_INIT" == true ]]; then
   if [[ -f "$PROFILE_DIR/keystore.enc" ]]; then
     log "Wallet already exists, skipping init"
-    ADDRESS=$($CLI receive 2>/dev/null | node -e "try{process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).eoaAddress)}catch{}" 2>/dev/null || echo "")
+    ADDRESS=$(env $ENV_ARGS $CLI receive 2>/dev/null | node -e "try{process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).eoaAddress)}catch{}" 2>/dev/null || echo "")
   else
     log "Initializing wallet..."
+    # Build init command with optional password
+    INIT_ENV="$ENV_ARGS"
     if [[ -n "$WALLET_PASSWORD" ]]; then
-      INIT_RESULT=$(WALLET_PASSWORD="$WALLET_PASSWORD" $CLI init 2>&1)
-    else
-      INIT_RESULT=$($CLI init 2>&1)
+      INIT_ENV="$INIT_ENV WALLET_PASSWORD=$WALLET_PASSWORD"
     fi
-    ADDRESS=$(echo "$INIT_RESULT" | node -e "try{process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).address)}catch{}" 2>/dev/null || echo "")
-    log "Wallet created: $ADDRESS"
-  fi
-fi
 
-# ---------- Step 6: Verify ----------
-log "Verifying..."
-if [[ -n "$WALLET_PASSWORD" ]]; then
-  VERIFY=$( WALLET_PASSWORD="$WALLET_PASSWORD" $CLI unlock --duration 10 2>&1 ) || true
-else
-  VERIFY=$( $CLI unlock --duration 10 2>&1 ) || true
+    if [[ -n "$MNEMONIC" ]]; then
+      # Import from mnemonic
+      INIT_RESULT=$(env $INIT_ENV $CLI import --mnemonic "$MNEMONIC" 2>&1)
+    else
+      # Create new wallet
+      INIT_RESULT=$(env $INIT_ENV $CLI init 2>&1)
+    fi
+
+    ADDRESS=$(echo "$INIT_RESULT" | node -e "try{process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).address)}catch{}" 2>/dev/null || echo "")
+    log "Wallet ready: $ADDRESS"
+  fi
+
+  # Verify: unlock + lock
+  log "Verifying..."
+  if [[ -n "$WALLET_PASSWORD" ]]; then
+    env $ENV_ARGS WALLET_PASSWORD="$WALLET_PASSWORD" $CLI unlock --duration 10 >/dev/null 2>&1 || true
+  else
+    env $ENV_ARGS $CLI unlock --duration 10 >/dev/null 2>&1 || true
+  fi
+  env $ENV_ARGS $CLI lock >/dev/null 2>&1 || true
+  log "OK"
 fi
-$CLI lock >/dev/null 2>&1 || true
-log "OK"
 
 # ---------- Done ----------
 echo "" >&2
 echo -e "${CYAN}  AWP Wallet installed successfully!${NC}" >&2
 echo -e "  ${GREEN}Install dir:${NC}  $INSTALL_DIR" >&2
-echo -e "  ${GREEN}Runtime dir:${NC}  $BASE_DIR" >&2
-echo -e "  ${GREEN}Command:${NC}      $CLI --version" >&2
+echo -e "  ${GREEN}Profile:${NC}      $PROFILE_ID ($PROFILE_DIR)" >&2
+echo -e "  ${GREEN}Command:${NC}      $CLI" >&2
 if [[ -n "$ADDRESS" ]]; then
   echo -e "  ${GREEN}Address:${NC}      $ADDRESS" >&2
 fi
 echo "" >&2
 
-# Output JSON
+# JSON output
 PMODE="auto"
 PW_JSON=""
 if [[ -n "${USER_PROVIDED_PASSWORD:-}" ]]; then
@@ -191,5 +205,5 @@ if [[ -n "${USER_PROVIDED_PASSWORD:-}" ]]; then
 fi
 
 cat <<ENDJSON
-{"status":"installed","installDir":"$INSTALL_DIR","walletDir":"$BASE_DIR","profileDir":"$PROFILE_DIR","passwordMode":"$PMODE",${PW_JSON}"address":"${ADDRESS:-null}","command":"$CLI","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
+{"status":"installed","installDir":"$INSTALL_DIR","profileId":"$PROFILE_ID","profileDir":"$PROFILE_DIR","passwordMode":"$PMODE",${PW_JSON}"address":"${ADDRESS:-null}","command":"$CLI","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
 ENDJSON

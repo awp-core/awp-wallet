@@ -41,7 +41,7 @@ export function loadConfig() {
     if (err.code === "ENOENT")
       throw new Error("Config not found. Run 'awp-wallet init' first.")
     if (err instanceof SyntaxError)
-      throw new Error("Config file corrupted. Delete and re-run setup.sh.")
+      throw new Error("Config file corrupted. Delete and re-run 'awp-wallet init'.")
     throw err
   }
 }

@@ -89,7 +89,7 @@
   ```bash
   git clone https://github.com/awp-core/awp-wallet.git
   cd awp-wallet
-  bash scripts/setup.sh
+  bash install.sh
   ```
 
   This will:
