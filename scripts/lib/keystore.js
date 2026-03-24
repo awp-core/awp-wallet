@@ -65,12 +65,7 @@ async function persistNewWallet(wallet, status) {
   registerWallet(wallet.address)
 
   const result = { status, address: wallet.address }
-  if (process.env.WALLET_PASSWORD) {
-    result.passwordMode = "explicit"
-    result.password = pw
-  } else {
-    result.passwordMode = "auto"
-  }
+  result.passwordMode = process.env.WALLET_PASSWORD ? "explicit" : "auto"
   return result
 }
 

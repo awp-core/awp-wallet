@@ -204,12 +204,10 @@ echo "" >&2
 
 # JSON output
 PMODE="auto"
-PW_JSON=""
 if [[ -n "${USER_PROVIDED_PASSWORD:-}" ]]; then
   PMODE="explicit"
-  PW_JSON="\"walletPassword\":\"$WALLET_PASSWORD\","
 fi
 
 cat <<ENDJSON
-{"status":"installed","installDir":"$INSTALL_DIR","profileId":"$PROFILE_ID","profileDir":"$PROFILE_DIR","passwordMode":"$PMODE",${PW_JSON}"address":"${ADDRESS:-null}","command":"${CLI[*]}","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
+{"status":"installed","installDir":"$INSTALL_DIR","profileId":"$PROFILE_ID","profileDir":"$PROFILE_DIR","passwordMode":"$PMODE","address":"${ADDRESS:-null}","command":"${CLI[*]}","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
 ENDJSON

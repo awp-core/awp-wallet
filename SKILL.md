@@ -15,7 +15,6 @@ metadata:
         - openssl
       anyBins:
         - npm
-    primaryEnv: WALLET_PASSWORD  # optional — auto-managed if not set
     emoji: "\U0001F4B0"
     homepage: https://github.com/awp-core/awp-wallet
     install:
@@ -189,6 +188,17 @@ Custom: `--chain 99999 --rpc-url https://custom.rpc.com`
 | `AWP_SESSION_ID=sess-1` | Per session |
 | `AWP_AGENT_ID=agent-1` | Per agent |
 | _(neither)_ | Shared ("default") |
+
+## Environment Variables (all optional)
+
+| Variable | Purpose |
+|----------|---------|
+| `WALLET_PASSWORD` | Use explicit password instead of auto-managed (needed for `export` and `change-password`) |
+| `PIMLICO_API_KEY` | Enable gasless ERC-4337 transactions |
+| `AWP_AGENT_ID` | Multi-agent wallet isolation |
+| `AWP_SESSION_ID` | Per-session wallet isolation |
+
+None are required for normal operation. The wallet auto-manages encryption by default.
 
 ## Gasless Mode
 
