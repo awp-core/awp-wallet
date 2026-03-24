@@ -9,11 +9,9 @@ description: >
 metadata:
   openclaw:
     requires:
-      env:
-        - PIMLICO_API_KEY    # optional — enables gasless ERC-4337
-        - ALCHEMY_API_KEY    # optional — RPC + bundler fallback
       bins:
         - node
+        - git
         - openssl
       anyBins:
         - npm
