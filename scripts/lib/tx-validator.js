@@ -53,6 +53,7 @@ export async function validateTransaction({ to, amount, asset, chain, _batchSpen
   if (checksummed.toLowerCase() === eoaAddr.toLowerCase()) {
     throw new Error("Cannot send to own address.")
   }
+  // Check smart account self-transfer (ignore if smart account doesn't exist)
   try {
     const chainId = resolveChainId(chain)
     const smartAddr = walletGetAddress("smart", chainId)
@@ -60,8 +61,8 @@ export async function validateTransaction({ to, amount, asset, chain, _batchSpen
       throw new Error("Cannot send to own Smart Account address.")
     }
   } catch (err) {
-    // Self-transfer errors must be re-thrown; other errors (smart account doesn't exist, etc.) are ignored
     if (err.message?.includes("Cannot send to own")) throw err
+    // Smart account lookup failure is non-fatal (account may not exist)
   }
 
   // 2. Allowlist

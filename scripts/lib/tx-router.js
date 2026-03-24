@@ -22,7 +22,7 @@ async function selectMode(chain, asset) {
 
   // Need gasless — check if bundler key exists
   const cfg = loadConfig()
-  const hasKey = cfg.bundlerProviders.some(p => process.env[p.envKey])
+  const hasKey = (cfg.bundlerProviders || []).some(p => process.env[p.envKey])
   if (hasKey) return "gasless"
 
   // Neither path is available
@@ -155,7 +155,7 @@ export async function estimateGas({ to, amount, asset, chain }) {
 
   const estimatedCost = gasPrice * estimatedGas
   const cfg = loadConfig()
-  const hasKey = cfg.bundlerProviders.some(p => process.env[p.envKey])
+  const hasKey = (cfg.bundlerProviders || []).some(p => process.env[p.envKey])
 
   return {
     direct: {

@@ -10,9 +10,10 @@ const REGISTRY_PATH = join(BASE_DIR, "wallets.json")
 // 2. AWP_AGENT_ID  — per-agent isolation (shared across sessions)
 // 3. "default"     — no isolation (all agents share one wallet)
 function resolveWalletId() {
-  if (process.env.AWP_SESSION_ID) return process.env.AWP_SESSION_ID
-  if (process.env.AWP_AGENT_ID) return process.env.AWP_AGENT_ID
-  return "default"
+  const raw = process.env.AWP_SESSION_ID || process.env.AWP_AGENT_ID || "default"
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(raw))
+    throw new Error(`Invalid wallet ID: "${raw}". Only alphanumeric, hyphen, underscore allowed.`)
+  return raw
 }
 
 export const walletId = resolveWalletId()

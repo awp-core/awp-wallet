@@ -63,6 +63,7 @@ async function persistNewWallet(wallet, status) {
   }
   // Register in wallet registry
   registerWallet(wallet.address)
+  _metaCache = null  // Reset cache so subsequent reads pick up new meta
 
   const result = { status, address: wallet.address }
   result.passwordMode = process.env.WALLET_PASSWORD ? "explicit" : "auto"

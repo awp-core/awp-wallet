@@ -262,7 +262,7 @@ cli.command("sign-message")
   .action(async (opts) => {
     try {
       const { requireScope } = await import("./lib/session.js")
-      requireScope(opts.token, "transfer")
+      requireScope(opts.token, "full")
       const { signMessage } = await import("./lib/signing.js")
       json(await signMessage(opts.message))
     } catch (e) { fail(e.message) }
@@ -398,7 +398,7 @@ cli.command("sign-typed-data")
   .action(async (opts) => {
     try {
       const { requireScope } = await import("./lib/session.js")
-      requireScope(opts.token, "transfer")
+      requireScope(opts.token, "full")
       const { signTypedData } = await import("./lib/signing.js")
       json(await signTypedData(JSON.parse(opts.data)))
     } catch (e) { fail(e.message) }

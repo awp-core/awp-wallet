@@ -5,6 +5,9 @@
   "bin": {
     "awp-wallet": "./scripts/wallet-cli.js"
   },
+  "scripts": {
+    "test": "node --test tests/integration/*.test.js"
+  },
   "engines": {
     "node": ">=20"
   },

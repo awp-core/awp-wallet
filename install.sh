@@ -26,6 +26,7 @@ PIMLICO_API_KEY=""
 ADDRESS=""
 AGENT_ID=""
 SESSION_ID=""
+USER_PROVIDED_PASSWORD=false
 REPO_URL="https://github.com/awp-core/awp-wallet.git"
 
 # ---------- Colors (stderr only) ----------
@@ -175,7 +176,7 @@ PROFILE_DIR="$BASE_DIR/wallets/$PROFILE_ID"
 mkdir -p "$PROFILE_DIR" && chmod 0700 "$PROFILE_DIR"
 mkdir -p "$PROFILE_DIR/sessions" && chmod 0700 "$PROFILE_DIR/sessions"
 
-if [[ ! -f "$PROFILE_DIR/config.json" ]]; then
+if [[ ! -f "$PROFILE_DIR/config.json" ]] && [[ -f "$INSTALL_DIR/assets/default-config.json" ]]; then
   cp "$INSTALL_DIR/assets/default-config.json" "$PROFILE_DIR/config.json"
   chmod 0600 "$PROFILE_DIR/config.json"
 fi
@@ -183,6 +184,13 @@ fi
 if [[ ! -f "$PROFILE_DIR/.session-secret" ]]; then
   openssl rand -hex 32 > "$PROFILE_DIR/.session-secret"
   chmod 0600 "$PROFILE_DIR/.session-secret"
+fi
+
+# Write PIMLICO_API_KEY to env file if provided
+if [[ -n "$PIMLICO_API_KEY" ]]; then
+  echo "PIMLICO_API_KEY=$PIMLICO_API_KEY" > "$PROFILE_DIR/.env"
+  chmod 0600 "$PROFILE_DIR/.env"
+  log "Pimlico API key saved to $PROFILE_DIR/.env"
 fi
 
 log "Profile: $PROFILE_ID ($PROFILE_DIR)"
@@ -204,11 +212,14 @@ if [[ "$AUTO_INIT" == true ]]; then
   else
     log "Initializing wallet..."
     if [[ -n "$MNEMONIC" ]]; then
-      INIT_RESULT=$(run_cli_pw import --mnemonic "$MNEMONIC" 2>&1)
+      INIT_RESULT=$(run_cli_pw import --mnemonic "$MNEMONIC" 2>&1) || { err "Wallet import failed: $INIT_RESULT"; }
     else
-      INIT_RESULT=$(run_cli_pw init 2>&1)
+      INIT_RESULT=$(run_cli_pw init 2>&1) || { err "Wallet init failed: $INIT_RESULT"; }
     fi
     ADDRESS=$(echo "$INIT_RESULT" | node -e "try{process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).address)}catch{}" 2>/dev/null || echo "")
+    if [[ -z "$ADDRESS" ]]; then
+      warn "Could not extract wallet address from init result"
+    fi
     log "Wallet ready: $ADDRESS"
   fi
 
@@ -232,7 +243,7 @@ echo "" >&2
 
 # JSON output
 PMODE="auto"
-if [[ -n "${USER_PROVIDED_PASSWORD:-}" ]]; then
+if [[ "$USER_PROVIDED_PASSWORD" == true ]]; then
   PMODE="explicit"
 fi
 

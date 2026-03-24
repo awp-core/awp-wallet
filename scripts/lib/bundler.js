@@ -30,7 +30,7 @@ export function createClients(chainNameOrId) {
   const chain = viemChain(chainId)
   const cfg = loadConfig()
 
-  const providers = cfg.bundlerProviders
+  const providers = (cfg.bundlerProviders || [])
     .filter(p => process.env[p.envKey])
     .sort((a, b) => a.priority - b.priority)
 
