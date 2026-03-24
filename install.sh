@@ -66,6 +66,7 @@ if [[ "$NODE_VER" -lt 20 ]]; then
 fi
 command -v npm &>/dev/null || err "npm not found."
 command -v git &>/dev/null || err "git not found."
+command -v openssl &>/dev/null || err "openssl not found."
 
 log "Node.js $(node -v), npm $(npm -v)"
 
@@ -124,14 +125,23 @@ mkdir -p "$BASE_DIR/wallets" && chmod 0700 "$BASE_DIR/wallets"
 
 # Determine profile directory
 PROFILE_ID="default"
-ENV_ARGS=""
 if [[ -n "$SESSION_ID" ]]; then
   PROFILE_ID="$SESSION_ID"
-  ENV_ARGS="AWP_SESSION_ID=$SESSION_ID"
 elif [[ -n "$AGENT_ID" ]]; then
   PROFILE_ID="$AGENT_ID"
-  ENV_ARGS="AWP_AGENT_ID=$AGENT_ID"
 fi
+
+# Helper: run CLI with correct wallet identity env vars
+run_cli() {
+  local extra_env=()
+  [[ -n "$SESSION_ID" ]] && extra_env+=(AWP_SESSION_ID="$SESSION_ID")
+  [[ -n "$AGENT_ID" ]] && extra_env+=(AWP_AGENT_ID="$AGENT_ID")
+  if [[ ${#extra_env[@]} -gt 0 ]]; then
+    env "${extra_env[@]}" $CLI "$@"
+  else
+    $CLI "$@"
+  fi
+}
 
 PROFILE_DIR="$BASE_DIR/wallets/$PROFILE_ID"
 mkdir -p "$PROFILE_DIR" && chmod 0700 "$PROFILE_DIR"
@@ -149,39 +159,35 @@ fi
 
 log "Profile: $PROFILE_ID ($PROFILE_DIR)"
 
+# Helper: run CLI with optional WALLET_PASSWORD
+run_cli_pw() {
+  if [[ -n "$WALLET_PASSWORD" ]]; then
+    WALLET_PASSWORD="$WALLET_PASSWORD" run_cli "$@"
+  else
+    run_cli "$@"
+  fi
+}
+
 # ---------- Step 5: Initialize wallet ----------
 if [[ "$AUTO_INIT" == true ]]; then
   if [[ -f "$PROFILE_DIR/keystore.enc" ]]; then
     log "Wallet already exists, skipping init"
-    ADDRESS=$(env $ENV_ARGS $CLI receive 2>/dev/null | node -e "try{process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).eoaAddress)}catch{}" 2>/dev/null || echo "")
+    ADDRESS=$(run_cli receive 2>/dev/null | node -e "try{process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).eoaAddress)}catch{}" 2>/dev/null || echo "")
   else
     log "Initializing wallet..."
-    # Build init command with optional password
-    INIT_ENV="$ENV_ARGS"
-    if [[ -n "$WALLET_PASSWORD" ]]; then
-      INIT_ENV="$INIT_ENV WALLET_PASSWORD=$WALLET_PASSWORD"
-    fi
-
     if [[ -n "$MNEMONIC" ]]; then
-      # Import from mnemonic
-      INIT_RESULT=$(env $INIT_ENV $CLI import --mnemonic "$MNEMONIC" 2>&1)
+      INIT_RESULT=$(run_cli_pw import --mnemonic "$MNEMONIC" 2>&1)
     else
-      # Create new wallet
-      INIT_RESULT=$(env $INIT_ENV $CLI init 2>&1)
+      INIT_RESULT=$(run_cli_pw init 2>&1)
     fi
-
     ADDRESS=$(echo "$INIT_RESULT" | node -e "try{process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).address)}catch{}" 2>/dev/null || echo "")
     log "Wallet ready: $ADDRESS"
   fi
 
   # Verify: unlock + lock
   log "Verifying..."
-  if [[ -n "$WALLET_PASSWORD" ]]; then
-    env $ENV_ARGS WALLET_PASSWORD="$WALLET_PASSWORD" $CLI unlock --duration 10 >/dev/null 2>&1 || true
-  else
-    env $ENV_ARGS $CLI unlock --duration 10 >/dev/null 2>&1 || true
-  fi
-  env $ENV_ARGS $CLI lock >/dev/null 2>&1 || true
+  run_cli_pw unlock --duration 10 >/dev/null 2>&1 || true
+  run_cli lock >/dev/null 2>&1 || true
   log "OK"
 fi
 

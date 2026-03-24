@@ -2,8 +2,11 @@ import { Wallet, encryptKeystoreJson } from "ethers"
 import { privateKeyToAccount } from "viem/accounts"
 import { createHash, createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto"
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from "node:fs"
-import { join } from "node:path"
+import { join, dirname } from "node:path"
+import { fileURLToPath } from "node:url"
 import { WALLET_DIR, WALLETS_DIR, registerWallet } from "./paths.js"
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 const KS_PATH = join(WALLET_DIR, "keystore.enc")
 const META_PATH = join(WALLET_DIR, "meta.json")
 const CACHE_DIR = join(WALLET_DIR, ".signer-cache")
@@ -50,7 +53,7 @@ async function persistNewWallet(wallet, status) {
   // Copy default config if not present
   const configPath = join(WALLET_DIR, "config.json")
   if (!existsSync(configPath)) {
-    const defaultConfig = join(import.meta.dirname, "..", "..", "assets", "default-config.json")
+    const defaultConfig = join(__dirname, "..", "..", "assets", "default-config.json")
     if (existsSync(defaultConfig)) writeFileSync(configPath, readFileSync(defaultConfig), { mode: 0o600 })
   }
   // Generate session secret if not present
