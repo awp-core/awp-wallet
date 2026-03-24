@@ -42,11 +42,13 @@ cd /tmp/awp-wallet && bash install.sh
 
 Options:
 ```bash
-bash install.sh                              # full install + init (default)
-bash install.sh --no-init                    # install only, no wallet created
-bash install.sh --mnemonic "word1 ... word12" # import existing wallet
-bash install.sh --password "my-secret"       # explicit password mode
-bash install.sh --agent-id my-agent          # multi-agent isolation
+bash install.sh                                # full install + init (default)
+bash install.sh --no-init                      # install only, skip wallet creation
+bash install.sh --mnemonic "word1 ... word12"  # import existing wallet
+bash install.sh --password "my-secret"         # explicit password mode
+bash install.sh --agent-id my-agent            # multi-agent isolation
+bash install.sh --session-id sess-1            # per-session isolation
+bash install.sh --pimlico "pm_xxx"             # enable gasless
 ```
 
 ## Every Session
@@ -155,15 +157,17 @@ awp-wallet chains
 awp-wallet chain-info --chain zksync
 ```
 
-### Account management
+### Wallet management
 ```bash
 awp-wallet init                                                            # create wallet
 awp-wallet import --mnemonic "word1 word2 ... word12"                      # import
-WALLET_PASSWORD="<pw>" awp-wallet export                                   # export (requires explicit password)
-WALLET_PASSWORD="<old>" NEW_WALLET_PASSWORD="<new>" awp-wallet change-password
-awp-wallet verify-log
+awp-wallet lock                                                            # revoke session
+awp-wallet status --token $T                                               # address + session info
 awp-wallet wallets                                                         # list all wallet profiles
 awp-wallet wallet-id                                                       # current wallet ID
+awp-wallet verify-log                                                      # audit log integrity
+WALLET_PASSWORD="<pw>" awp-wallet export                                   # export seed (requires explicit password)
+WALLET_PASSWORD="<old>" NEW_WALLET_PASSWORD="<new>" awp-wallet change-password
 ```
 
 ## Chains & Tokens
@@ -192,7 +196,7 @@ Auto-activates when no native gas. Requires `PIMLICO_API_KEY`.
 
 | Error | Fix |
 |-------|-----|
-| `awp-wallet: command not found` | Run: `cd /tmp/awp-wallet && bash install.sh --no-init` |
+| `awp-wallet: command not found` | Install: `git clone https://github.com/awp-core/awp-wallet.git /tmp/awp-wallet && cd /tmp/awp-wallet && bash install.sh` |
 | `No wallet found` | `awp-wallet init` |
 | `Config not found` | `awp-wallet init` (self-provisions config) |
 | `Invalid or expired session` | `awp-wallet unlock --duration 3600` |
