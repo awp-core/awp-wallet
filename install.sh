@@ -97,26 +97,54 @@ npm install --no-audit --no-fund 2>&1 | tail -1
 
 # ---------- Step 3: Register CLI command ----------
 log "Registering awp-wallet command..."
-if npm link 2>/dev/null; then
-  log "Registered: $(which awp-wallet 2>/dev/null || echo 'awp-wallet')"
-elif sudo npm link 2>/dev/null; then
-  log "Registered (sudo): $(which awp-wallet 2>/dev/null || echo 'awp-wallet')"
-else
+chmod +x "$INSTALL_DIR/scripts/wallet-cli.js"
+
+REGISTERED=false
+
+# Try npm link (creates global symlink)
+if npm link 2>/dev/null && command -v awp-wallet &>/dev/null; then
+  REGISTERED=true
+  log "Registered via npm link: $(which awp-wallet)"
+elif sudo npm link 2>/dev/null && command -v awp-wallet &>/dev/null; then
+  REGISTERED=true
+  log "Registered via npm link (sudo): $(which awp-wallet)"
+fi
+
+# Fallback: symlink into ~/.local/bin and ensure it's in PATH
+if [[ "$REGISTERED" == false ]]; then
   mkdir -p "$HOME/.local/bin"
   ln -sf "$INSTALL_DIR/scripts/wallet-cli.js" "$HOME/.local/bin/awp-wallet"
-  chmod +x "$INSTALL_DIR/scripts/wallet-cli.js"
   log "Registered: ~/.local/bin/awp-wallet"
+
+  # Add ~/.local/bin to PATH for this process
   if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
-    warn "Add to PATH: export PATH=\"\$HOME/.local/bin:\$PATH\""
+    export PATH="$HOME/.local/bin:$PATH"
+
+    # Persist to shell rc file so future shells also find awp-wallet
+    RC_LINE='export PATH="$HOME/.local/bin:$PATH"'
+    WROTE_RC=false
+    for RC_FILE in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+      if [[ -f "$RC_FILE" ]] && ! grep -qF '.local/bin' "$RC_FILE"; then
+        printf '\n# Added by awp-wallet installer\n%s\n' "$RC_LINE" >> "$RC_FILE"
+        log "Added ~/.local/bin to PATH in $(basename "$RC_FILE")"
+        WROTE_RC=true
+        break
+      fi
+    done
+    # If no rc file had it, append to .profile (create if needed)
+    if [[ "$WROTE_RC" == false ]] && ! grep -qsF '.local/bin' "$HOME/.profile"; then
+      printf '\n# Added by awp-wallet installer\n%s\n' "$RC_LINE" >> "$HOME/.profile"
+      log "Added ~/.local/bin to PATH in .profile"
+    fi
   fi
 fi
 
-# CLI command (as array for space-safe invocation)
-if command -v awp-wallet &>/dev/null; then
-  CLI=(awp-wallet)
-else
-  CLI=(node "$INSTALL_DIR/scripts/wallet-cli.js")
+# Final verification
+if ! command -v awp-wallet &>/dev/null; then
+  err "Failed to register awp-wallet in PATH. Add manually: export PATH=\"\$HOME/.local/bin:\$PATH\""
 fi
+
+CLI=(awp-wallet)
 
 # ---------- Step 4: Create runtime directories ----------
 BASE_DIR="$HOME/.openclaw-wallet"
@@ -196,7 +224,7 @@ echo "" >&2
 echo -e "${CYAN}  AWP Wallet installed successfully!${NC}" >&2
 echo -e "  ${GREEN}Install dir:${NC}  $INSTALL_DIR" >&2
 echo -e "  ${GREEN}Profile:${NC}      $PROFILE_ID ($PROFILE_DIR)" >&2
-echo -e "  ${GREEN}Command:${NC}      ${CLI[*]}" >&2
+echo -e "  ${GREEN}Command:${NC}      $(which awp-wallet)" >&2
 if [[ -n "$ADDRESS" ]]; then
   echo -e "  ${GREEN}Address:${NC}      $ADDRESS" >&2
 fi
@@ -209,5 +237,5 @@ if [[ -n "${USER_PROVIDED_PASSWORD:-}" ]]; then
 fi
 
 cat <<ENDJSON
-{"status":"installed","installDir":"$INSTALL_DIR","profileId":"$PROFILE_ID","profileDir":"$PROFILE_DIR","passwordMode":"$PMODE","address":"${ADDRESS:-null}","command":"${CLI[*]}","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
+{"status":"installed","installDir":"$INSTALL_DIR","profileId":"$PROFILE_ID","profileDir":"$PROFILE_DIR","passwordMode":"$PMODE","address":"${ADDRESS:-null}","command":"awp-wallet","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
 ENDJSON
