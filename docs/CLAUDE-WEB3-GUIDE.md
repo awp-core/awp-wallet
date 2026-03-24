@@ -1,78 +1,59 @@
 # AWP Wallet — Claude Code Integration Guide
 
-> Copy the relevant sections into your web3 project's CLAUDE.md so Claude Code knows how to use the local wallet.
+> Add the relevant sections to your web3 project's CLAUDE.md so Claude Code knows how to use the wallet.
 
 ## Add to Your Project's CLAUDE.md
 
-```markdown
+````markdown
 ## Local Wallet (awp-wallet)
 
-This project uses `awp-wallet` as the local EVM wallet for signing transactions, deploying contracts, and interacting with on-chain protocols.
+This project uses `awp-wallet` as the local EVM wallet. No password needed — the wallet auto-manages encryption.
 
-### Wallet Basics
-
-The wallet is a CLI tool. Every command outputs JSON to stdout. Errors output JSON to stderr with exit code 1.
+### Install (once)
 
 ```bash
-# Check if wallet is set up
-awp-wallet --version
-
-# Wallet address
-awp-wallet receive
-
-# Unlock wallet (required before any write operation)
-WALLET_PASSWORD="$WALLET_PASSWORD" awp-wallet unlock --duration 3600
-# Returns: { "sessionToken": "wlt_abc123...", "expires": "..." }
-
-# Lock wallet when done
-awp-wallet lock
+git clone https://github.com/awp-core/awp-wallet.git /tmp/awp-wallet
+cd /tmp/awp-wallet && bash install.sh
 ```
 
-### Session Token Workflow
-
-Every write operation requires a session token. The pattern is:
+### Session Workflow
 
 ```bash
-# 1. Unlock to get token
-export WALLET_PASSWORD="your-password"
+# Ensure wallet exists
+awp-wallet receive 2>/dev/null || awp-wallet init
+
+# Unlock (get session token)
 TOKEN=$(awp-wallet unlock --duration 3600 | jq -r '.sessionToken')
 
-# 2. Use token for operations
-awp-wallet balance --token $TOKEN --chain base
-awp-wallet send --token $TOKEN --to 0x... --amount 0.1 --chain base
+# Use token for operations
+awp-wallet balance --token $TOKEN --chain ethereum
+awp-wallet send --token $TOKEN --to 0x... --amount 0.1 --chain ethereum
 
-# 3. Lock when done
+# Lock when done
 awp-wallet lock
 ```
 
-In Node.js scripts:
+In Node.js:
 
 ```javascript
 import { execFileSync } from "node:child_process"
 
-function wallet(args, env = {}) {
+function wallet(args) {
   const result = execFileSync("awp-wallet", args, {
     encoding: "utf8",
-    env: { ...process.env, ...env },
+    stdio: ["pipe", "pipe", "pipe"],
   })
   return JSON.parse(result)
 }
 
 // Unlock
-const { sessionToken } = wallet(["unlock", "--duration", "3600"], {
-  WALLET_PASSWORD: process.env.WALLET_PASSWORD,
-})
+const { sessionToken } = wallet(["unlock", "--duration", "3600"])
 
-// Check balance
-const bal = wallet(["balance", "--token", sessionToken, "--chain", "base"])
-console.log(bal.balances)
+// Balance
+const bal = wallet(["balance", "--token", sessionToken, "--chain", "ethereum"])
 
 // Send
-const tx = wallet(
-  ["send", "--token", sessionToken, "--to", "0x...", "--amount", "0.1", "--chain", "base"],
-  { WALLET_PASSWORD: process.env.WALLET_PASSWORD }
-)
-console.log(tx.txHash)
+const tx = wallet(["send", "--token", sessionToken, "--to", "0x...", "--amount", "0.1", "--chain", "ethereum"])
 
 // Lock
 wallet(["lock"])
@@ -81,354 +62,198 @@ wallet(["lock"])
 ### Chain Selection
 
 ```bash
-# By name
---chain ethereum
---chain base
---chain bsc
---chain arbitrum
---chain polygon
-
-# By chain ID
---chain 56
---chain 8453
---chain 42161
-
-# Custom chain (must provide --chain with numeric ID)
---chain 99999 --rpc-url https://custom-rpc.com
+--chain ethereum / --chain base / --chain bsc / --chain arbitrum / --chain polygon
+--chain avalanche / --chain fantom / --chain zksync / --chain linea / --chain scroll
+--chain mantle / --chain blast / --chain celo / --chain optimism
+--chain 99999 --rpc-url https://custom-rpc.com   # any EVM chain
 ```
 
-Default chain (when --chain omitted): `bsc` (configurable in ~/.openclaw-wallet/config.json)
+Default chain: `ethereum`. 16 preconfigured + 400+ via viem.
 
 ### Token Selection
 
 ```bash
-# By symbol (preconfigured chains only)
---asset usdc
---asset usdt
---asset weth
---asset wbnb
-
-# By contract address (any chain, auto-detects decimals)
---asset 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+--asset usdc / --asset usdt / --asset awp / --asset weth / --asset wbnb / --asset dai
+--asset 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913  # any token by address
 ```
-
-IMPORTANT: BSC USDC/USDT have 18 decimals (not 6). The wallet handles this automatically.
 
 ### Common Operations
 
-#### Check balance
 ```bash
-awp-wallet balance --token $TOKEN --chain base
-awp-wallet balance --token $TOKEN --chain base --asset usdc
-awp-wallet balance --token $TOKEN --chain base --asset 0xTokenAddr
+# Balance
+awp-wallet balance --token $T --chain ethereum
+awp-wallet balance --token $T --chain bsc --asset usdc
+awp-wallet portfolio --token $T
+
+# Send
+awp-wallet send --token $T --to 0xAddr --amount 0.1 --chain ethereum
+awp-wallet send --token $T --to 0xAddr --amount 100 --asset usdc --chain base
+awp-wallet send --token $T --to 0xAddr --amount 50 --asset usdc --chain base --mode gasless
+
+# Approve / Revoke
+awp-wallet approve --token $T --asset usdc --spender 0xRouter --amount 1000 --chain base
+awp-wallet revoke --token $T --asset usdc --spender 0xRouter --chain base
+
+# Sign
+awp-wallet sign-message --token $T --message "Hello World"
+awp-wallet sign-typed-data --token $T --data '{"types":{...},"primaryType":"...","domain":{...},"message":{...}}'
+
+# Batch
+awp-wallet batch --token $T --chain base --ops '[{"to":"0xA","amount":"10","asset":"usdc"}]'
+
+# Gas estimate
+awp-wallet estimate --to 0xAddr --amount 0.1 --chain ethereum
+
+# Address
+awp-wallet receive
+
+# Transaction status
+awp-wallet tx-status --hash 0xHash --chain ethereum
+
+# History
+awp-wallet history --token $T --chain ethereum --limit 20
+
+# Allowances
+awp-wallet allowances --token $T --asset usdc --spender 0xRouter --chain base
 ```
 
-#### Send native token (ETH/BNB/MATIC)
-```bash
-WALLET_PASSWORD="$PW" awp-wallet send \
-  --token $TOKEN --to 0xRecipient --amount 0.1 --chain base
-```
+### Contract Deployment
 
-#### Send ERC-20 token
-```bash
-WALLET_PASSWORD="$PW" awp-wallet send \
-  --token $TOKEN --to 0xRecipient --amount 100 --asset usdc --chain base
-```
-
-#### Approve token spending (for DEX/protocol interactions)
-```bash
-WALLET_PASSWORD="$PW" awp-wallet approve \
-  --token $TOKEN --asset usdc --spender 0xRouterAddr --amount 1000 --chain base
-```
-
-#### Revoke approval
-```bash
-WALLET_PASSWORD="$PW" awp-wallet revoke \
-  --token $TOKEN --asset usdc --spender 0xRouterAddr --chain base
-```
-
-#### Estimate gas
-```bash
-awp-wallet estimate --to 0xRecipient --amount 0.1 --chain base
-awp-wallet estimate --to 0xRecipient --amount 100 --asset usdc --chain base
-```
-
-#### Sign message (EIP-191)
-```bash
-WALLET_PASSWORD="$PW" awp-wallet sign-message \
-  --token $TOKEN --message "Hello World"
-```
-
-#### Sign typed data (EIP-712, for Permit2/protocols)
-```bash
-WALLET_PASSWORD="$PW" awp-wallet sign-typed-data \
-  --token $TOKEN --data '{"domain":{...},"types":{...},"message":{...}}'
-```
-
-#### Get wallet address
-```bash
-awp-wallet receive --chain base
-# Returns: { "eoaAddress": "0x...", "smartAccountAddress": "0x..." | null }
-```
-
-#### Check transaction status
-```bash
-awp-wallet tx-status --hash 0xTxHash --chain base
-# Returns: { "status": "confirmed" | "pending" | "reverted", "blockNumber": ..., "gasUsed": ... }
-```
-
-#### Transaction history
-```bash
-awp-wallet history --token $TOKEN --chain base --limit 20
-```
-
-### Smart Contract Deployment
-
-The wallet doesn't have a dedicated `deploy` command. For contract deployment, use the wallet's signing capability with your deployment framework:
-
-#### With viem / Hardhat / Forge
-
-The wallet doesn't support arbitrary contract bytecode deployment via CLI (the `send` command only handles transfers). For contract deployment, export the mnemonic and use your deployment framework:
+The wallet doesn't deploy contracts directly. Export the mnemonic for your deployment framework:
 
 ```javascript
-// Get the mnemonic from awp-wallet (use in a secure local environment only)
-const exported = wallet(["export"], { WALLET_PASSWORD: PW })
-// exported.mnemonic = "word1 word2 ... word12"
-// Use this with your deployment framework (Hardhat, Forge, viem scripts, etc.)
-```
-
-#### With Hardhat
-
-```javascript
-// hardhat.config.js
-// Get the mnemonic from awp-wallet
-const { execFileSync } = require("child_process")
-const { mnemonic } = JSON.parse(
-  execFileSync("awp-wallet", ["export"], {
-    encoding: "utf8",
-    env: { ...process.env, WALLET_PASSWORD: process.env.WALLET_PASSWORD },
-  })
-)
-
-module.exports = {
-  networks: {
-    base: {
-      url: "https://mainnet.base.org",
-      accounts: { mnemonic },
-    },
-  },
-}
+// Requires explicit WALLET_PASSWORD (auto-managed wallets cannot export)
+const exported = wallet(["export"], {
+  env: { ...process.env, WALLET_PASSWORD: "your-password" }
+})
+// Use exported.mnemonic with Hardhat, Forge, etc.
 ```
 
 ### Transaction Limits
 
-The wallet enforces safety limits (configurable in ~/.openclaw-wallet/config.json):
+Configurable in `~/.openclaw-wallet/wallets/default/config.json`:
 
 ```
-Per-transaction: USDC 500, USDT 500, ETH 0.25, default 250
-Daily (24h):     USDC 1000, USDT 1000, ETH 0.5, BNB 1.0, default 500
+Per-transaction: USDC 500, ETH 0.25, default 250
+Daily (24h):     USDC 1000, ETH 0.5, BNB 1.0, default 500
 ```
-
-To modify limits for development/testing, edit `~/.openclaw-wallet/config.json`.
 
 ### Error Handling
 
-Always check exit code and parse error JSON:
-
 ```javascript
-function wallet(args, env = {}) {
+function wallet(args) {
   try {
-    const result = execFileSync("awp-wallet", args, {
-      encoding: "utf8",
-      env: { ...process.env, ...env },
-      stdio: ["pipe", "pipe", "pipe"],
-    })
-    return { ok: true, data: JSON.parse(result) }
+    return { ok: true, data: JSON.parse(execFileSync("awp-wallet", args, { encoding: "utf8", stdio: ["pipe","pipe","pipe"] })) }
   } catch (e) {
-    const errJson = (e.stderr || e.stdout || "").trim()
-    try {
-      return { ok: false, error: JSON.parse(errJson).error }
-    } catch {
-      return { ok: false, error: e.message }
-    }
+    try { return { ok: false, error: JSON.parse((e.stderr||"").trim()).error } }
+    catch { return { ok: false, error: e.message } }
   }
 }
 ```
 
-Common errors:
-- `"WALLET_PASSWORD environment variable required."` — forgot to pass password
-- `"Wrong password — decryption failed."` — wrong password
-- `"Invalid or expired session token."` — token expired or wallet locked
-- `"Insufficient balance for transfer + gas."` — not enough native token
-- `"Daily limit exceeded for USDC."` — hit 24h rolling limit
-- `"Amount must be a positive number."` — invalid amount
+### Environment Variables (all optional)
 
-### Environment Variables
+| Variable | Purpose |
+|----------|---------|
+| `WALLET_PASSWORD` | Explicit password mode (default: auto-managed) |
+| `PIMLICO_API_KEY` | Enable gasless ERC-4337 transactions |
+| `AWP_AGENT_ID` | Multi-agent wallet isolation |
 
-```bash
-# Required for write operations
-export WALLET_PASSWORD="your-password"
+### Gasless Mode
 
-# Optional: enable gasless transactions (ERC-4337)
-export PIMLICO_API_KEY="pm_xxx"
-
-# Optional: custom RPC endpoints
-export BSC_RPC_URL="https://your-bsc-rpc.com"
-export ALCHEMY_API_KEY="your-alchemy-key"
-```
-
-### Gasless Transactions
-
-When native gas balance is insufficient, the wallet automatically switches to gasless mode (requires PIMLICO_API_KEY):
-
-```bash
-# Force gasless mode
-WALLET_PASSWORD="$PW" awp-wallet send \
-  --token $TOKEN --to 0x... --amount 100 --asset usdc --chain base --mode gasless
-
-# Force direct mode (fails if insufficient gas)
-WALLET_PASSWORD="$PW" awp-wallet send \
-  --token $TOKEN --to 0x... --amount 0.1 --chain base --mode direct
-```
-
-### Multi-Chain Development
-
-```bash
-# Same wallet works on all chains — just change --chain
-awp-wallet balance --token $TOKEN --chain ethereum
-awp-wallet balance --token $TOKEN --chain base
-awp-wallet balance --token $TOKEN --chain bsc
-awp-wallet balance --token $TOKEN --chain arbitrum
-
-# Portfolio (all chains at once)
-awp-wallet portfolio --token $TOKEN
-
-# Chain info (check capabilities)
-awp-wallet chain-info --chain base
-```
-```
+Auto-activates when no native gas. Requires `PIMLICO_API_KEY`. Force with `--mode gasless`.
+````
 
 ## Wallet Helper Script
 
 For complex web3 projects, create a `scripts/wallet.js` helper:
 
 ```javascript
-// scripts/wallet.js — AWP Wallet helper for web3 projects
+// scripts/wallet.js — AWP Wallet helper
 import { execFileSync } from "node:child_process"
 
-const PW = process.env.WALLET_PASSWORD
-if (!PW) throw new Error("Set WALLET_PASSWORD environment variable")
-
-export function wallet(args, opts = {}) {
-  const env = { ...process.env, ...opts.env }
-  if (opts.password !== false) env.WALLET_PASSWORD = PW
+function call(args) {
   try {
-    const stdout = execFileSync("awp-wallet", args, {
-      encoding: "utf8",
-      env,
-      stdio: ["pipe", "pipe", "pipe"],
-      timeout: opts.timeout || 120_000,
-    })
-    return JSON.parse(stdout.trim())
+    return JSON.parse(execFileSync("awp-wallet", args, {
+      encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 120_000,
+    }))
   } catch (e) {
     const msg = (e.stderr || e.stdout || "").trim()
     try { throw new Error(JSON.parse(msg).error) }
-    catch (inner) {
-      if (inner.message !== msg) throw inner
-      throw new Error(msg || e.message)
-    }
+    catch (inner) { if (inner.message !== msg) throw inner; throw new Error(msg || e.message) }
   }
 }
 
 let _token = null
 
 export function unlock(duration = 3600) {
-  const { sessionToken } = wallet(["unlock", "--duration", String(duration)])
+  const { sessionToken } = call(["unlock", "--duration", String(duration)])
   _token = sessionToken
   return sessionToken
 }
 
-export function lock() {
-  _token = null
-  return wallet(["lock"], { password: false })
-}
+export function lock() { _token = null; return call(["lock"]) }
 
 export function token() {
-  if (!_token) throw new Error("Wallet not unlocked. Call unlock() first.")
+  if (!_token) throw new Error("Call unlock() first.")
   return _token
 }
 
-export function balance(chain, asset) {
+export const balance = (chain, asset) => {
   const args = ["balance", "--token", token(), "--chain", chain]
   if (asset) args.push("--asset", asset)
-  return wallet(args, { password: false })
+  return call(args)
 }
 
-export function send({ to, amount, chain, asset, mode }) {
+export const send = ({ to, amount, chain, asset, mode }) => {
   const args = ["send", "--token", token(), "--to", to, "--amount", String(amount), "--chain", chain]
   if (asset) args.push("--asset", asset)
   if (mode) args.push("--mode", mode)
-  return wallet(args)
+  return call(args)
 }
 
-export function approve({ asset, spender, amount, chain }) {
-  return wallet(["approve", "--token", token(), "--asset", asset,
-    "--spender", spender, "--amount", String(amount), "--chain", chain])
-}
+export const approve = ({ asset, spender, amount, chain }) =>
+  call(["approve", "--token", token(), "--asset", asset, "--spender", spender, "--amount", String(amount), "--chain", chain])
 
-export function revoke({ asset, spender, chain }) {
-  return wallet(["revoke", "--token", token(), "--asset", asset,
-    "--spender", spender, "--chain", chain])
-}
+export const revoke = ({ asset, spender, chain }) =>
+  call(["revoke", "--token", token(), "--asset", asset, "--spender", spender, "--chain", chain])
 
-export function signMessage(message) {
-  return wallet(["sign-message", "--token", token(), "--message", message])
-}
+export const signMessage = (message) =>
+  call(["sign-message", "--token", token(), "--message", message])
 
-export function signTypedData(data) {
-  return wallet(["sign-typed-data", "--token", token(), "--data", JSON.stringify(data)])
-}
+export const signTypedData = (data) =>
+  call(["sign-typed-data", "--token", token(), "--data", JSON.stringify(data)])
 
-export function address(chain) {
+export const address = (chain) => {
   const args = ["receive"]
   if (chain) args.push("--chain", chain)
-  return wallet(args, { password: false })
+  return call(args)
 }
 
-export function estimate({ to, amount, chain, asset }) {
+export const estimate = ({ to, amount, chain, asset }) => {
   const args = ["estimate", "--to", to, "--amount", String(amount), "--chain", chain]
   if (asset) args.push("--asset", asset)
-  return wallet(args, { password: false })
+  return call(args)
 }
 
-export function txStatus(hash, chain) {
-  return wallet(["tx-status", "--hash", hash, "--chain", chain], { password: false })
-}
+export const txStatus = (hash, chain) =>
+  call(["tx-status", "--hash", hash, "--chain", chain])
 ```
 
-Usage in your web3 scripts:
+Usage:
 
 ```javascript
-import { unlock, balance, send, approve, lock, address } from "./scripts/wallet.js"
+import { unlock, balance, send, lock, address } from "./scripts/wallet.js"
 
-// Get wallet address
-const { eoaAddress } = address("base")
+const { eoaAddress } = address("ethereum")
 console.log("Wallet:", eoaAddress)
 
-// Unlock
 unlock(3600)
-
-// Check balance
-const bal = balance("base", "usdc")
+const bal = balance("ethereum", "usdc")
 console.log("USDC:", bal.balances.USDC)
 
-// Approve USDC spending for a DEX router
-approve({ asset: "usdc", spender: "0xRouterAddr", amount: "1000", chain: "base" })
-
-// Send USDC
 const tx = send({ to: "0xRecipient", amount: "50", chain: "base", asset: "usdc" })
 console.log("TX:", tx.txHash)
 
-// Lock
 lock()
 ```
