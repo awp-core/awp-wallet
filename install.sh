@@ -102,13 +102,10 @@ chmod +x "$INSTALL_DIR/scripts/wallet-cli.js"
 
 REGISTERED=false
 
-# Try npm link (creates global symlink)
+# Try npm link (user-level only — never use sudo to avoid system-level files)
 if npm link 2>/dev/null && command -v awp-wallet &>/dev/null; then
   REGISTERED=true
   log "Registered via npm link: $(which awp-wallet)"
-elif sudo npm link 2>/dev/null && command -v awp-wallet &>/dev/null; then
-  REGISTERED=true
-  log "Registered via npm link (sudo): $(which awp-wallet)"
 fi
 
 # Fallback: symlink into ~/.local/bin and ensure it's in PATH
