@@ -60,20 +60,22 @@ describe("keystore — initWallet", () => {
     ctx.cleanup()
   })
 
-  it("creates keystore.enc and meta.json files", () => {
+  it("creates encrypted wallet.json and meta.json files", () => {
     const res = runCli("init", ctx.env)
     assert.equal(res.exitCode, 0, `init failed: ${res.stderr}`)
-    assert.ok(existsSync(join(ctx.walletDir, "keystore.enc")), "keystore.enc should exist")
+    assert.ok(existsSync(join(ctx.walletDir, "wallet.json")), "wallet.json should exist")
     assert.ok(existsSync(join(ctx.walletDir, "meta.json")), "meta.json should exist")
   })
 
-  it("keystore.enc is valid V3 JSON (contains Crypto field)", () => {
+  it("wallet.json stores encrypted payload metadata without plaintext secrets", () => {
     runCli("init", ctx.env)
-    const ksRaw = readFileSync(join(ctx.walletDir, "keystore.enc"), "utf8")
+    const ksRaw = readFileSync(join(ctx.walletDir, "wallet.json"), "utf8")
     const ks = JSON.parse(ksRaw)
-    // ethers v6 uses uppercase 'Crypto' field name (conforming to V3 spec)
-    assert.ok(ks.Crypto || ks.crypto, "keystore.enc should contain 'Crypto' or 'crypto' field (V3 format)")
-    assert.equal(ks.version, 3, "keystore version should be 3")
+    assert.equal(ks.format, "awp-wallet-encrypted")
+    assert.equal(ks.version, 1)
+    assert.ok(ks.crypto?.ciphertext, "wallet.json should contain ciphertext")
+    assert.equal("privateKey" in ks, false, "wallet.json should not expose plaintext privateKey")
+    assert.equal("mnemonic" in ks, false, "wallet.json should not expose plaintext mnemonic")
   })
 
   it("meta.json contains address and smartAccounts fields", () => {
@@ -367,12 +369,12 @@ describe("keystore — file permissions", () => {
     ctx.cleanup()
   })
 
-  it("keystore.enc permissions should be 0o600 (owner read/write only)", () => {
+  it("wallet.json permissions should be 0o600 (owner read/write only)", () => {
     runCli("init", ctx.env)
-    const ksPath = join(ctx.walletDir, "keystore.enc")
+    const ksPath = join(ctx.walletDir, "wallet.json")
     const stat = statSync(ksPath)
     // Extract the lower 9 bits of file permissions (rwx rwx rwx)
     const mode = stat.mode & 0o777
-    assert.equal(mode, 0o600, `keystore.enc permissions should be 0600, actual: 0${mode.toString(8)}`)
+    assert.equal(mode, 0o600, `wallet.json permissions should be 0600, actual: 0${mode.toString(8)}`)
   })
 })

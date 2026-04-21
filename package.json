@@ -6,7 +6,10 @@
     "awp-wallet": "./scripts/wallet-cli.js"
   },
   "scripts": {
-    "test": "node --test tests/integration/*.test.js"
+    "test": "node --test tests/integration/*.test.js",
+    "test:encrypted-keystore": "node --test tests/integration/encrypted-keystore.test.js",
+    "test:e2e": "node --test tests/e2e/*.test.js",
+    "test:all": "npm test && npm run test:e2e"
   },
   "engines": {
     "node": ">=20"

@@ -12,7 +12,7 @@ import { dirname } from "node:path"
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PROJECT_ROOT = join(__dirname, "..", "..")
 const CLI_PATH = join(PROJECT_ROOT, "scripts", "wallet-cli.js")
-const DEFAULT_CONFIG = join(PROJECT_ROOT, "assets", "default-config.json")
+const DEFAULT_CONFIG = join(PROJECT_ROOT, "assets", "default-chains.json")
 
 export const TEST_PASSWORD = "test-pwd-123"
 export const TEST_PASSWORD_NEW = "new-pwd-456"
@@ -24,13 +24,14 @@ export const TEST_PASSWORD_NEW = "new-pwd-456"
 export function createTestEnv(opts = {}) {
   const fakeHome = join(tmpdir(), `openclaw-home-${randomBytes(8).toString("hex")}`)
   mkdirSync(fakeHome)
-  const realWalletDir = join(fakeHome, ".openclaw-wallet")
-  mkdirSync(realWalletDir, { mode: 0o700 })
-  mkdirSync(join(realWalletDir, "sessions"), { mode: 0o700 })
+  const baseWalletDir = join(fakeHome, ".openclaw-wallet")
+  const realWalletDir = join(baseWalletDir, "wallets", "default")
+  mkdirSync(realWalletDir, { recursive: true, mode: 0o700 })
+  mkdirSync(join(realWalletDir, "sessions"), { recursive: true, mode: 0o700 })
 
   // Copy default configuration
   const configSrc = readFileSync(DEFAULT_CONFIG, "utf8")
-  writeFileSync(join(realWalletDir, "config.json"), configSrc, { mode: 0o600 })
+  writeFileSync(join(realWalletDir, "chains.json"), configSrc, { mode: 0o600 })
 
   // Generate HMAC session secret
   const secret = randomBytes(32).toString("hex")

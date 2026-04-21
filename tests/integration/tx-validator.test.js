@@ -233,7 +233,7 @@ describe("tx-validator", () => {
 
   it("allowlistMode: when enabled, recipient not in allowlist throws error", () => {
     // Modify config to enable allowlistMode
-    const configPath = join(ctx.walletDir, "config.json")
+    const configPath = join(ctx.walletDir, "chains.json")
     const config = JSON.parse(readFileSync(configPath, "utf8"))
     config.allowlistMode = true
     config.allowlistedRecipients = ["0xdead000000000000000000000000000000000001"]

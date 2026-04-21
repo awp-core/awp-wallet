@@ -251,7 +251,7 @@ describe("BSC token decimals", () => {
 
   it("BSC USDC decimals is 18 (not 6)", () => {
     ctx = createTestEnv()
-    const configRaw = JSON.parse(readWalletFile(ctx.walletDir, "config.json"))
+    const configRaw = JSON.parse(readWalletFile(ctx.walletDir, "chains.json"))
     const bscUsdc = configRaw.chains.bsc.tokens.USDC
     assert.equal(bscUsdc.decimals, 18, "BSC USDC decimals should be 18")
   })

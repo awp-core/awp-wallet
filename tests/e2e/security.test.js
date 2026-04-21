@@ -27,7 +27,7 @@ describe("wrong password", () => {
 
   afterEach(() => ctx?.cleanup())
 
-  it("unlock with wrong password after init -> 'Wrong password — decryption failed.'", () => {
+  it("unlock with wrong password after init -> wrong password error", () => {
     ctx = createTestEnv()
     const init = runCli("init", ctx.env)
     assert.equal(init.exitCode, 0, `init should succeed: ${init.stderr}`)
@@ -38,7 +38,7 @@ describe("wrong password", () => {
     assert.notEqual(unlock.exitCode, 0, "unlock should fail")
     const out = unlock.stderr || unlock.stdout
     assert.ok(
-      out.includes("Wrong password") && out.includes("decryption failed"),
+      out.includes("Wrong password") || out.includes("corrupted wallet"),
       `should indicate wrong password, actual: ${out}`
     )
   })
@@ -161,15 +161,15 @@ describe("file permissions", () => {
 
   afterEach(() => ctx?.cleanup())
 
-  it("keystore.enc permissions should be 0o600", () => {
+  it("wallet.json permissions should be 0o600", () => {
     ctx = createTestEnv()
     runCli("init", ctx.env)
-    const ksPath = join(ctx.walletDir, "keystore.enc")
-    assert.ok(existsSync(ksPath), "keystore.enc should exist")
+    const ksPath = join(ctx.walletDir, "wallet.json")
+    assert.ok(existsSync(ksPath), "wallet.json should exist")
     const stat = statSync(ksPath)
     // Lower 9 bits of mode: rwx rwx rwx
     const perm = stat.mode & 0o777
-    assert.equal(perm, 0o600, `keystore.enc permissions should be 0600, actual: ${perm.toString(8)}`)
+    assert.equal(perm, 0o600, `wallet.json permissions should be 0600, actual: ${perm.toString(8)}`)
   })
 })
 

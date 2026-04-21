@@ -73,8 +73,9 @@ export function validateSession(tokenId) {
 const SCOPE_LEVELS = { read: 1, transfer: 2, full: 3 }
 
 export function requireScope(tokenId, needed) {
-  // Token is now optional — plaintext wallet doesn't need session auth
-  if (!tokenId) return { scope: "full", id: "none", created: new Date().toISOString(), expires: "2099-01-01T00:00:00.000Z" }
+  if (!tokenId) {
+    throw new Error(`Session token required for '${needed}' operations.`)
+  }
   const session = validateSession(tokenId)
   if ((SCOPE_LEVELS[session.scope] || 0) < (SCOPE_LEVELS[needed] || 0)) {
     throw new Error(`Scope '${session.scope}' insufficient; '${needed}' required.`)

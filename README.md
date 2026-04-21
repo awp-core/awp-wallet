@@ -14,7 +14,7 @@
     <img src="https://img.shields.io/badge/License-MIT-97CA00?style=flat" alt="MIT">
   </p>
 
-  Self-custodial, chain-agnostic EVM blockchain wallet for AI agents. Direct EOA transactions by default, with on-demand ERC-4337 gasless support. No password needed — auto-managed encryption.
+  Self-custodial, chain-agnostic EVM blockchain wallet for AI agents. Direct EOA transactions by default, with on-demand ERC-4337 gasless support. Wallet storage is encrypted, and privileged operations require explicit session tokens.
 
   ### Works with
 
@@ -51,7 +51,7 @@
   |------|---------|-------------|
   | `--no-init` | Init enabled | Install only, skip wallet creation |
   | `--mnemonic <phrase>` | New wallet | Import existing wallet |
-  | `--password <pwd>` | Auto-managed | Explicit password mode |
+  | `--password <pwd>` | Deprecated | Use `WALLET_PASSWORD` or `WALLET_PASSWORD_FILE` after install |
   | `--agent-id <id>` | `default` | Multi-agent isolation |
   | `--session-id <id>` | — | Per-session isolation |
   | `--pimlico <key>` | None | Enable gasless transactions |
@@ -64,24 +64,27 @@
     │
     │  User: "Send 50 USDC to 0xBob on Base"
     │
-    ├─ 1. awp-wallet unlock --duration 300
+    ├─ 1. export WALLET_PASSWORD_FILE=/run/secrets/awp-wallet-password
+    │
+    ├─ 2. awp-wallet unlock --duration 300
     │     → { "sessionToken": "wlt_abc..." }
     │
-    ├─ 2. awp-wallet send --token wlt_abc --to 0xBob --amount 50 --asset usdc --chain base
+    ├─ 3. awp-wallet send --token wlt_abc --to 0xBob --amount 50 --asset usdc --chain base
     │     → { "status": "sent", "txHash": "0x...", "mode": "direct" }
     │
-    └─ 3. awp-wallet lock
+    └─ 4. awp-wallet lock
           → { "status": "locked" }
   ```
 
-  Each command outputs JSON. The agent only sees session tokens — **never** private keys. No password needed.
+  Each command outputs JSON. The agent only sees session tokens, never private keys. Wallet decryption uses `WALLET_PASSWORD` or `WALLET_PASSWORD_FILE`.
 
   ## Features
 
   - **400+ EVM chains** — 16 preconfigured + any custom chain
   - **Dual-mode** — Direct EOA (default) or gasless ERC-4337 (auto when no gas)
   - **Self-custodial** — Private keys never leave the wallet process
-  - **Auto-managed** — No password configuration needed
+  - **Encrypted storage** — wallet.json uses scrypt + AES-256-GCM
+  - **Session-gated signing** — privileged operations require explicit session tokens
   - **Multi-agent** — Per-agent or per-session wallet isolation
   - **16 chains** — Ethereum, Base, BSC, Arbitrum, Optimism, Polygon, Avalanche, Fantom, zkSync, Linea, Scroll, Mantle, Blast, Celo + testnets
   - **28 commands** — Send, balance, approve, revoke, sign, estimate, batch, and more
@@ -121,7 +124,7 @@
 
   | Layer | Protection |
   |-------|-----------|
-  | Keystore | scrypt (N=262144) + AES-128-CTR |
+  | Keystore | scrypt + AES-256-GCM |
   | Signer cache | scrypt (N=16384) + AES-256-GCM |
   | Session tokens | HMAC-SHA256, time-limited, tamper-proof |
   | File permissions | 0o600/0o700 (owner-only) |
@@ -133,11 +136,14 @@
 
   ## Environment Variables
 
-  All optional — the wallet works with zero configuration.
+  Session ids and bundler keys are optional. Password material is required to create or decrypt a wallet.
 
   | Variable | Purpose |
   |----------|---------|
-  | `WALLET_PASSWORD` | Explicit password (default: auto-managed) |
+  | `WALLET_PASSWORD` | Wallet decryption password |
+  | `WALLET_PASSWORD_FILE` | File path containing the wallet decryption password |
+  | `NEW_WALLET_PASSWORD` | New password for `change-password` |
+  | `NEW_WALLET_PASSWORD_FILE` | File path containing the new password for `change-password` |
   | `PIMLICO_API_KEY` | Enable gasless ERC-4337 |
   | `AWP_AGENT_ID` | Multi-agent wallet isolation |
   | `AWP_SESSION_ID` | Per-session wallet isolation |
@@ -183,7 +189,9 @@
 
   ```bash
   # Tests
-  node --test tests/integration/*.test.js tests/e2e/*.test.js
+  npm test
+  npm run test:e2e
+  npm run test:all
 
   # Update
   cd awp-wallet && git pull && npm install

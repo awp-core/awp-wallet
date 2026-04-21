@@ -3,6 +3,18 @@ import { getAddress as walletGetAddress } from "./keystore.js"
 import { getHistory } from "./tx-logger.js"
 import { loadConfig, resolveChainId, viemChain, nativeSymbol } from "./chains.js"
 
+const DEFAULT_PER_TX_LIMITS = {
+  default: "250",
+  USDC: "500",
+  USDT: "500",
+}
+
+const DEFAULT_DAILY_LIMITS = {
+  default: "1000",
+  USDC: "1000",
+  USDT: "1000",
+}
+
 function checkLimit(amount, limitStr, label) {
   if (!limitStr) return  // No limit configured
   if (parseFloat(amount) > parseFloat(limitStr)) {
@@ -16,6 +28,7 @@ function checkDailyLimit(amount, asset, chain, batchSpent = {}) {
   const resolvedAsset = asset || nativeSymbol(chain)
   const normalizedAsset = resolvedAsset.toUpperCase()
   const limitStr = cfg.dailyLimits?.[normalizedAsset] || cfg.dailyLimits?.default
+    || DEFAULT_DAILY_LIMITS[normalizedAsset] || DEFAULT_DAILY_LIMITS.default
   if (!limitStr) return
   // Use numeric chainId for history filtering (log entries store chainId as number)
   const chainId = resolveChainId(chain)
@@ -77,6 +90,7 @@ export async function validateTransaction({ to, amount, asset, chain, _batchSpen
   // 3. Per-transaction limit
   const resolvedAsset = asset || nativeSymbol(chain)
   const perTxLimit = cfg.perTransactionMax?.[resolvedAsset.toUpperCase()] || cfg.perTransactionMax?.default
+    || DEFAULT_PER_TX_LIMITS[resolvedAsset.toUpperCase()] || DEFAULT_PER_TX_LIMITS.default
   checkLimit(amount, perTxLimit, "Per-transaction limit")
 
   // 4. Daily limit (in batch mode, includes accumulated amounts validated but not yet persisted)
