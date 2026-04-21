@@ -18,7 +18,7 @@ import { resolveChainId, viemChain } from "../../scripts/lib/chains.js"
  * Helper function: read the config file from the wallet directory
  */
 function readConfigFile(walletDir) {
-  return JSON.parse(readFileSync(join(walletDir, "config.json"), "utf8"))
+  return JSON.parse(readFileSync(join(walletDir, "chains.json"), "utf8"))
 }
 
 describe("chains — resolveChainId (built-in aliases)", () => {
@@ -150,7 +150,7 @@ describe("chains — loadConfig error handling (via CLI)", () => {
 
   it("throws 'Config not found' when config file is missing", () => {
     // Delete the config file
-    unlinkSync(join(ctx.walletDir, "config.json"))
+    unlinkSync(join(ctx.walletDir, "chains.json"))
     const res = runCli("chains", ctx.env)
     assert.notEqual(res.exitCode, 0)
     const output = res.stderr || res.stdout
@@ -159,7 +159,7 @@ describe("chains — loadConfig error handling (via CLI)", () => {
 
   it("throws 'Config file corrupted' when config file has invalid JSON", () => {
     // Write corrupted JSON
-    writeFileSync(join(ctx.walletDir, "config.json"), "{invalid json!!!")
+    writeFileSync(join(ctx.walletDir, "chains.json"), "{invalid json!!!")
     const res = runCli("chains", ctx.env)
     assert.notEqual(res.exitCode, 0)
     const output = res.stderr || res.stdout

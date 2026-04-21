@@ -12,7 +12,7 @@ import { initAndUnlock, runCli, createTestEnv } from "../helpers/setup.js"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PROJECT_ROOT = join(__dirname, "..", "..")
-const CONFIG_PATH = join(PROJECT_ROOT, "assets", "default-config.json")
+const CONFIG_PATH = join(PROJECT_ROOT, "assets", "default-chains.json")
 
 // Load default config for structural assertions
 const defaultConfig = JSON.parse(readFileSync(CONFIG_PATH, "utf8"))

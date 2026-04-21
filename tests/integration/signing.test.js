@@ -170,4 +170,15 @@ describe("signing", () => {
     assert.ok(output.includes("insufficient") || output.includes("Scope"),
       `expected insufficient permission error, actual: ${output}`)
   })
+
+  it("sign-message CLI: missing token is rejected", () => {
+    const res = runCli(
+      'sign-message --message "no token"',
+      ctx.env,
+    )
+    assert.notEqual(res.exitCode, 0, "missing token should be rejected")
+    const output = res.stderr + res.stdout
+    assert.ok(output.includes("Session token required"),
+      `expected missing token error, actual: ${output}`)
+  })
 })

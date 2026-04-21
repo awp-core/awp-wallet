@@ -100,8 +100,14 @@ cli.command("lock")
   })
 
 cli.command("change-password")
-  .description("(Removed) Wallet no longer uses passwords")
-  .action(() => { json({ status: "no_op", message: "Wallet uses plaintext storage now. Password management is no longer needed." }) })
+  .description("Rotate the wallet encryption password")
+  .action(async () => {
+    try {
+      const nextPassword = process.env.NEW_WALLET_PASSWORD
+      const { changePassword } = await import("./lib/keystore.js")
+      json(changePassword(nextPassword))
+    } catch (e) { fail(e.message) }
+  })
 
 cli.command("export")
   .description("Export wallet mnemonic")

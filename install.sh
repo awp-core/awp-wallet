@@ -42,7 +42,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --dir)          INSTALL_DIR="$2"; shift 2 ;;
     --no-init)      AUTO_INIT=false; shift ;;
-    --password)     warn "--password is deprecated (wallet uses plaintext storage now)"; shift 2 ;;
+    --password)     warn "--password is deprecated. Use WALLET_PASSWORD / WALLET_PASSWORD_FILE after install."; shift 2 ;;
     --mnemonic)     MNEMONIC="$2"; shift 2 ;;
     --pimlico)      PIMLICO_API_KEY="$2"; shift 2 ;;
     --agent-id)     AGENT_ID="$2"; shift 2 ;;
@@ -252,5 +252,5 @@ echo "" >&2
 
 # JSON output
 cat <<ENDJSON
-{"status":"installed","installDir":"$INSTALL_DIR","profileId":"$PROFILE_ID","profileDir":"$PROFILE_DIR","storageMode":"plaintext","address":"${ADDRESS:-null}","command":"awp-wallet","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
+{"status":"installed","installDir":"$INSTALL_DIR","profileId":"$PROFILE_ID","profileDir":"$PROFILE_DIR","storageMode":"encrypted","address":"${ADDRESS:-null}","command":"awp-wallet","pimlicoEnabled":$([ -n "$PIMLICO_API_KEY" ] && echo true || echo false)}
 ENDJSON

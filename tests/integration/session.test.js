@@ -179,6 +179,16 @@ describe("session — requireScope (via history and sign-message commands)", () 
     }
   })
 
+  it("missing token is rejected for scoped operations", () => {
+    const historyRes = runCli("history", ctx.env)
+    assert.notEqual(historyRes.exitCode, 0)
+    const output = historyRes.stderr || historyRes.stdout
+    assert.ok(
+      output.includes("Session token required"),
+      `should require a session token, actual: ${output}`
+    )
+  })
+
   it("'read' scope is insufficient for 'transfer' operations and throws error", () => {
     // Unlock with read scope
     const unlockRes = runCli("unlock --duration 3600 --scope read", ctx.env)
